@@ -98,6 +98,37 @@ function evaluation(b){
     `<p class="note">Misses are in percentage points of vote share, for the DA, ANC and EFF across the eight metros. "Count-so-far" treats the count at that stage as the final result. Every published range contained the real result, more often than the 90% the ranges aim for, so they are on the cautious side. Withheld means the safety rule held the projection back.</p>`;
 }
 
+// After the count: score the projections we actually published against the final result.
+function howClose(h, nh, p, n){
+  const done = n && n.vdCounted >= n.vdTotal;
+  if(!done) return "";
+  const stages = [10, 25, 50, 75];
+  const rowsFor = (label, series, final) => stages.map((st, i) => {
+    const next = stages[i + 1] || 100;
+    const near = series.filter(x => x.vdPct >= st && x.vdPct < next);   // only projections made at this stage
+    const e = near.find(x => x.reliable);
+    if(!e){
+      const why = !series.length || series[0].vdPct >= next ? "projections started later in the count" : "held back (not enough data)";
+      return `<tr><td>${label}</td><td>${st}%</td><td colspan="4" class="muted">${why}</td></tr>`;
+    }
+    const [now, lo, md, hi] = e.DA, f = final;
+    return `<tr><td>${label}</td><td>${st}% <small>(${e.vdPct.toFixed(0)}%)</small></td><td>${md.toFixed(1)}% <small>${lo}–${hi}</small></td><td>${f.toFixed(1)}%</td>
+      <td><b>${Math.abs(md - f).toFixed(1)}</b> <small>vs ${Math.abs(now - f).toFixed(1)}</small></td><td>${lo <= f && f <= hi ? "yes" : "no"}</td></tr>`;
+  }).join("");
+  const natFinal = (n.parties.find(x => x.short === "DA") || {}).now;
+  const natSeries = (nh || []).map(x => { const d = x.parties.find(q => q.short === "DA"); return {vdPct: 100 * x.vdCounted / x.vdTotal, reliable: x.reliable, DA: d && [d.now, ...d.proj]}; }).filter(x => x.DA);
+  let body = natFinal != null ? rowsFor("South Africa", natSeries, natFinal) : "";
+  for(const m of p.metros){
+    const id = String(m.munic), d = m.parties.find(x => x.short === "DA"); if(!d) continue;
+    const series = h.map(x => x.metros && x.metros[id]).filter(Boolean).map(x => ({vdPct: x.vdPct, reliable: x.reliable, DA: x.parties.DA})).filter(x => x.DA);
+    body += rowsFor(SHORT[m.name] || m.name, series, d.now);
+  }
+  return `<section class="card" id="close"><h2>How close were we?</h2>
+    <p>The DA projection we published as each stage of the count was reached, against the final count.</p>
+    <div class="pr-tablewrap"><table class="bt"><thead><tr><th>Place</th><th>Stage <small>(actual)</small></th><th>We projected</th><th>Final</th><th>Miss <small>(vs count-so-far)</small></th><th>Inside range</th></tr></thead>
+    <tbody>${body}</tbody></table></div><p class="note">Provisional until the IEC declares the results. Only projections published live during the count are scored, not ones recomputed afterwards.</p></section>`;
+}
+
 async function load(){
   try{
     const [p, h, n, nh, b, live] = await Promise.all([get("data/projections.json"), get("data/projections_history.json").catch(() => []),
@@ -108,7 +139,7 @@ async function load(){
     const behind = live && live.reportDate && (new Date(live.reportDate) - new Date(p.reportDate)) > 20 * 60000;
     $("stale").hidden = !behind;
     if(behind) $("stale").textContent = `These projections use the count of ${hm(p.reportDate)}; the live count has moved on to ${hm(live.reportDate)}. They'll catch up shortly.`;
-    $("national").innerHTML = nationalCard(n, nh);
+    $("national").innerHTML = howClose(h, nh, p, n) + nationalCard(n, nh);
     const ms = p.metros.slice().sort((a, c) => ORDER.indexOf(String(a.munic)) - ORDER.indexOf(String(c.munic)));
     $("metros").innerHTML = metroTable(ms, h);
     document.querySelectorAll(".pr-line").forEach(tr => {
