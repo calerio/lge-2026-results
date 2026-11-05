@@ -121,7 +121,7 @@ function render(s, prevI){
   requestAnimationFrame(() => document.querySelectorAll(".fill").forEach(f => f.style.width = f.dataset.w + "%"));
 
   $("prog").innerHTML = `<span>Voting districts</span><span>${fmt(n.vd)} / ${fmt(n.vdTotal)}</span>
-    <span>Votes cast</span><span>${fmt(n.cast)}</span>
+    <span>Ballots counted so far</span><span>${fmt(n.cast)}</span>
     <span>Spoilt</span><span>${fmt(n.spoilt)}</span>
     <span>Councils decided</span><span>${n.councilsDone} / ${n.councilsTotal}</span>
     <span>Hung so far</span><span>${n.hung}</span>`;
