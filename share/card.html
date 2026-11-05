@@ -1,30 +1,16 @@
-<!DOCTYPE html><html><head><meta charset="utf-8">
-<link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@800;900&family=Permanent+Marker&display=swap" rel="stylesheet">
-<style>
+<!DOCTYPE html><html><head><meta charset="utf-8"><style>
+@font-face{font-family:Bowlby;src:url(fonts/BowlbyOne-Regular.ttf)}
+@font-face{font-family:Abril;src:url(fonts/AbrilFatface-Regular.ttf)}
 *{margin:0;box-sizing:border-box}
-body{width:1200px;height:630px;overflow:hidden;background:#005ba6;font-family:Inter;position:relative;color:#fff}
-.burst{position:absolute;inset:-300px;background:repeating-conic-gradient(from 0deg at 62% 50%,#0a6fd0 0 7deg,#004b8c 7deg 14deg)}
-.vig{position:absolute;inset:0;background:radial-gradient(60% 80% at 62% 50%,transparent 30%,#002a55cc 100%)}
-.big{position:absolute;left:46px;top:40px;font:400 210px/0.84 Anton;text-transform:uppercase;letter-spacing:-.01em;
-  text-shadow:8px 8px 0 #001f40}
-.big .hot{color:#fff}
-.big .boys{color:#ffd400}
-.vote{position:absolute;left:52px;top:418px;display:flex;align-items:center;gap:24px}
-.vote span{font:400 110px/1 Anton;text-shadow:6px 6px 0 #001f40}
-.da{background:#fff;color:#005ba6;font:900 118px/1 Inter;padding:4px 34px 10px;border-radius:22px;transform:rotate(-4deg);
-  box-shadow:10px 10px 0 #001f40;letter-spacing:-.04em}
-.sticker{position:absolute;right:70px;top:70px;width:250px;height:250px;border-radius:50%;background:#ffd400;color:#002a55;
-  display:flex;flex-direction:column;align-items:center;justify-content:center;transform:rotate(12deg);box-shadow:10px 10px 0 #001f40;
-  font:900 30px/1.05 Inter;text-align:center;text-transform:uppercase;border:6px dashed #002a55}
-.sticker b{font:400 64px/1 Anton}
-.marker{position:absolute;right:60px;bottom:150px;font:400 54px/1.05 "Permanent Marker";color:#fff;transform:rotate(-6deg);text-align:right;text-shadow:4px 4px 0 #001f40}
-.url{position:absolute;right:56px;bottom:46px;font:900 26px Inter;background:#001f40;padding:12px 22px;border-radius:999px;color:#ffd400}
-.fire{position:absolute;font-size:84px}
+body{width:1200px;height:630px;overflow:hidden;background:#104bb4;position:relative}
+.art{position:absolute;left:50%;top:58px;width:1010px;transform:translateX(-50%)}
+.rule{position:absolute;left:150px;right:150px;top:452px;height:3px;background:#f7a11f;opacity:.9}
+.sub{position:absolute;left:0;right:0;top:478px;text-align:center;font:400 40px Abril,serif;color:#fff;letter-spacing:.01em}
+.sub span{color:#f7a11f}
+.url{position:absolute;left:0;right:0;bottom:44px;text-align:center;font:400 20px Bowlby,sans-serif;color:#f7a11f;letter-spacing:.14em}
 </style></head><body>
-<div class="burst"></div><div class="vig"></div>
-<div class="big"><span class="hot">Hot</span><br><span class="boys">boys</span></div>
-<div class="vote"><span>VOTE</span><div class="da">DA</div><span class="fire" style="position:static">🔥</span></div>
-<div class="sticker"><span>LIVE</span><b>LGE</b><b>2026</b></div>
-<div class="marker">watch the blue<br>wave come in 💙</div>
-<div class="url">calerio.github.io/lge-2026-results</div>
+<img class="art" src="hotboys.png">
+<div class="rule"></div>
+<div class="sub">Local Elections 2026 <span>·</span> live results, ward by ward</div>
+<div class="url">CALERIO.GITHUB.IO/LGE-2026-RESULTS</div>
 </body></html>
