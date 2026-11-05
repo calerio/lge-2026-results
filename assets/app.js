@@ -386,8 +386,8 @@ async function jhb(){
   const toMaj = Math.max(0, 50 - da[1]);
   $("jhbBody").innerHTML = `
     <div class="jhb-top">
-      <div><div class="jhb-big">${da[1].toFixed(1)}%</div><div class="jhb-sub">DA in Joburg · ${m.vdPct.toFixed(0)}% counted ${vs21(da[1], past("2021", JHB, "DA"))}</div></div>
-      <div class="jhb-maj">${da[1] >= 50 ? "<b>Majority</b> on current count" : `<b>${toMaj.toFixed(1)} pts</b> short of a majority`}</div>
+      <div><div class="jhb-big">${da[1].toFixed(1)}%</div><div class="jhb-sub">DA in Joburg's count so far · ${m.vdPct.toFixed(0)}% of districts counted</div></div>
+      <div class="jhb-maj">${da[1] >= 50 ? "<b>Over 50%</b> of the vote so far" : `<b>${toMaj.toFixed(1)} pts</b> short of 50% of the vote`}</div>
     </div>
     <div class="jhb-bars">
       ${ps.map(p => `<div class="jhb-row"><span>${p[0]}</span><div class="track"><div style="width:${p[1] / max * 100}%;background:${col(p[0])}"></div><i style="left:${50 / max * 100}%"></i></div><b>${p[1].toFixed(1)}%</b></div>`).join("")}
@@ -398,7 +398,12 @@ async function jhb(){
       <div><b>${m.seats}/${m.seatsTotal}</b><span>seats declared</span></div>
       ${rivals[0] ? `<div><b>${(da[1] - rivals[0][1]).toFixed(1)} pts</b><span>${da[1] >= rivals[0][1] ? "ahead of" : "behind"} ${rivals[0][0]}</span></div>` : ""}
     </div>
+    <p class="jhb-proj" id="jhbProj"></p>
     <button class="jhb-go" id="jhbGo">See Joburg's wards on the map</button>`;
+  getJSON("data/projections.json").then(pj => {
+    const j = (pj.metros || []).find(x => String(x.munic) === JHB), d = j && j.reliable && j.parties.find(p => p.short === "DA");
+    if(d) $("jhbProj").innerHTML = `Projected finish: <b>DA ${d.proj[1].toFixed(1)}%</b> <span>(likely ${d.proj[0]}–${d.proj[2]}%)</span> ${vs21(d.proj[1], past("2021", JHB, "DA"))} · <a href="predictions.html">How we project →</a>`;
+  }).catch(() => {});
   $("jhbGo").onclick = () => { openMunic(JHB, true); $("mapTitle").scrollIntoView({behavior:"smooth", block:"start"}); };
 }
 
@@ -413,7 +418,7 @@ async function stellies(){
     $("h-stellies").textContent = myName() + ", ward by ward";
     $("stelliesBody").innerHTML = pickerHtml() + `
       <div class="st-head">
-        <div><div class="st-big" style="color:${col("DA")}">${daPct.toFixed(1)}%</div><small>DA across ${myName()} · ${m ? m.vdPct.toFixed(0) : 0}% of districts counted ${vs21(daPct, past("2021", STELLIES, "DA"))}</small></div>
+        <div><div class="st-big" style="color:${col("DA")}">${daPct.toFixed(1)}%</div><small>DA in ${myName()} so far · ${m ? m.vdPct.toFixed(0) : 0}% of districts counted ${vs21(daPct, past("2021", STELLIES, "DA"))}</small></div>
         <div class="st-score"><b>${daWins.length}</b> of ${wards.length} wards blue so far</div>
       </div>
       ${best ? `<div class="thanks"><span>Thank you, Ward ${best.no}</span><small>The most DA ward in ${myName()} so far: ${best.pct.toFixed(1)}% of the ward vote.</small></div>` : ""}

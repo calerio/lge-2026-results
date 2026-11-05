@@ -262,3 +262,4 @@ footer p a{color:#fff}
 .pagenav a{display:inline-flex;align-items:center;min-height:44px;padding:0 16px;border:2px solid #fff;color:#fff;text-decoration:none;font:700 15px Inter,sans-serif}
 .pagenav a:hover{background:#ffffff1f}
 .pagenav a[aria-current=page]{background:#f7a11f;border-color:#f7a11f;color:#16181d;box-shadow:3px 3px 0 #cf2027}
+.jhb-proj{margin:4px 0 16px;font-size:15px}.jhb-proj span{color:#55585f}.jhb-proj a{font-weight:700}
