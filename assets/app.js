@@ -46,6 +46,14 @@ async function wardsFor(id){
   return fetch(`${API}/wards/${id}`).then(r => r.json()).then(wardSummary);
 }
 
+// Final results of 2021 and 2016 (data/past.json, made once by scripts/fetch_past.py)
+let PAST = null;
+const pastReady = getJSON("data/past.json").then(d => PAST = d).catch(() => null);
+const past = (year, munic, party) => { const y = PAST && PAST[year]; if(!y) return null;
+  if(munic == null) return y.national[party] ?? null;
+  const r = (y.munics[munic] || []).find(p => p[0] === party); return r ? r[1] : null; };
+const vs21 = (now, then) => then == null ? "" : `<span class="vs21 ${now >= then ? "up" : "dn"}">${now >= then ? "+" : "−"}${Math.abs(now - then).toFixed(1)} on 2021</span>`;
+
 let latest = null, index = [], view = null, viewIdx = -1, map, munGeo, selMunic = null, wardCache = {};
 
 async function getJSON(u){ const r = await fetch(u + bust()); if(!r.ok) throw new Error(u + " " + r.status); return r.json(); }
@@ -141,7 +149,9 @@ function render(s, prevI){
   const barRow = p => {
     const d = prev && prev[p.short] != null ? p.pct - prev[p.short] : null;
     const dh = d == null || Math.abs(d) < .005 ? "" : `<span class="delta ${d >= 0 ? "up" : "dn"}">${d >= 0 ? "▲ +" : "▼ −"}${Math.abs(d).toFixed(2)}</span>`;
-    return `<div class="bar" title="${p.name}"><span>${p.short}</span><div class="track"><div class="fill" style="width:0;background:${col(p.short)}" data-w="${p.pct / max * 100}"></div></div><span>${p.pct.toFixed(2)}%${dh}</span></div>`;
+    const was = past("2021", null, p.short);
+    const tick = was != null ? `<i class="tick21" style="left:${Math.min(was / max, 1) * 100}%" title="2021: ${was}%"></i>` : "";
+    return `<div class="bar" title="${p.name}${was != null ? ` · 2021: ${was}%` : ""}"><span>${p.short}</span><div class="track">${tick}<div class="fill" style="width:0;background:${col(p.short)}" data-w="${p.pct / max * 100}"></div></div><span>${p.pct.toFixed(2)}%${dh}${was != null ? `<small class="was">2021: ${was.toFixed(1)}%</small>` : ""}</span></div>`;
   };
   $("bars").innerHTML = parties.slice(0, 8).map(barRow).join("") + (parties.length > 8 ? `<details class="moreparties"><summary>Show all parties (${parties.length})</summary>${parties.slice(8).map(barRow).join("")}</details>` : "");
   requestAnimationFrame(() => document.querySelectorAll(".fill").forEach(f => f.style.width = f.dataset.w + "%"));
@@ -191,10 +201,13 @@ function trend(){
   for(let v = 0; v <= top; v += 10) g += `<line x1="${P}" x2="${W - P}" y1="${y(v)}" y2="${y(v)}" stroke="#ddd5c4"/><text x="2" y="${y(v) + 4}">${v}%</text>`;
   [lo, (lo + hi) / 2, hi].forEach(v => g += `<text x="${x(v)}" y="${H - 12}" text-anchor="middle">${Math.round(v)}%</text>`);
   g += `<text x="${W - P}" y="${H - 1}" text-anchor="end">share of districts counted →</text>`;
+  if(PAST) g += `<text x="${W - P - 9}" y="${P / 2}" text-anchor="middle">2021</text>`;
   parties.forEach(p => {
     const pts = index.filter(s => s.parties[p] != null).map(s => [x(s.vdPct), y(s.parties[p])]);
     g += `<polyline fill="none" stroke="${col(p)}" stroke-width="2.5" points="${pts.join(" ")}"/>` + pts.map(([a, b]) => `<circle cx="${a}" cy="${b}" r="2.5" fill="${col(p)}"/>`).join("");
     const [lx, ly] = pts[pts.length - 1]; g += `<text x="${lx + 4}" y="${ly + 4}" style="fill:${col(p)};font-weight:700">${p}</text>`;
+    const was = past("2021", null, p);
+    if(was != null) g += `<line x1="${W - P - 22}" x2="${W - P + 4}" y1="${y(was)}" y2="${y(was)}" stroke="${col(p)}" stroke-width="3" stroke-dasharray="3 2"><title>${p} 2021: ${was}%</title></line>`;
   });
   if(viewIdx !== -1) g += `<line x1="${x(index[viewIdx].vdPct)}" x2="${x(index[viewIdx].vdPct)}" y1="${P / 2}" y2="${H - P}" stroke="#0b357f" stroke-dasharray="4 3"/>`;
   svg.innerHTML = g;
@@ -316,6 +329,7 @@ function nationalOrMunicPanel(){
   $("panel").innerHTML = `<small>${m.prov}</small><h3>${m.name}</h3>
     ${selMunic === STELLIES ? `<p class="pinned">📌 Your municipality</p>` : `<button class="pinbtn" onclick="pinMunic('${selMunic}');document.getElementById('stellies').scrollIntoView({behavior:'smooth'})">📌 Pin as my municipality</button>`}
     <small>${(viewIdx === -1 ? m.vdPct : L?.vd ?? 0).toFixed(0)}% of districts counted · ${m.seats}/${m.seatsTotal} seats declared</small>
+    ${PAST && PAST["2021"].munics[selMunic] ? `<p class="was-line">2021: ${PAST["2021"].munics[selMunic].map(p => `${p[0]} ${p[1].toFixed(1)}%`).join(" · ")}</p>` : ""}
     ${m.hung ? `<p><span class="badge" style="background:#555b66;color:#fff">Hung council${m.done && m.parties[0] ? ` · ${m.parties[0][0]} largest party` : ""}</span></p>` : m.done && m.winner ? `<p><span class="badge" style="background:${col(m.winner)};color:${inkOn(col(m.winner))}">${m.winner} wins the council</span></p>` : ""}
     ${viewIdx !== -1 ? `<p class="note">Earlier count: ${L ? `${L.p} led with ${L.pct.toFixed(1)}%` : "nothing counted"}. Breakdown below is the latest.</p>` : ""}
     ${m.parties.map(p => `<div class="row"><span>${p[0]}</span><div class="track" style="height:12px"><div style="width:${p[1]}%;background:${col(p[0])}"></div></div><span>${p[1].toFixed(1)}%</span></div>`).join("")}`;
@@ -358,12 +372,13 @@ async function jhb(){
   const toMaj = Math.max(0, 50 - da[1]);
   $("jhbBody").innerHTML = `
     <div class="jhb-top">
-      <div><div class="jhb-big">${da[1].toFixed(1)}%</div><div class="jhb-sub">DA in Joburg · ${m.vdPct.toFixed(0)}% counted</div></div>
+      <div><div class="jhb-big">${da[1].toFixed(1)}%</div><div class="jhb-sub">DA in Joburg · ${m.vdPct.toFixed(0)}% counted ${vs21(da[1], past("2021", JHB, "DA"))}</div></div>
       <div class="jhb-maj">${da[1] >= 50 ? "<b>Majority</b> on current count" : `<b>${toMaj.toFixed(1)} pts</b> short of a majority`}</div>
     </div>
     <div class="jhb-bars">
       ${ps.map(p => `<div class="jhb-row"><span>${p[0]}</span><div class="track"><div style="width:${p[1] / max * 100}%;background:${col(p[0])}"></div><i style="left:${50 / max * 100}%"></i></div><b>${p[1].toFixed(1)}%</b></div>`).join("")}
     </div>
+    ${PAST ? `<p class="was-line">2021 result: ${(PAST["2021"].munics[JHB] || []).map(p => `${p[0]} ${p[1].toFixed(1)}%`).join(" · ")}</p>` : ""}
     <div class="jhb-facts">
       ${wardsTotal ? `<div><b>${blue}</b><span>of ${wardsTotal} wards blue</span></div>` : ""}
       <div><b>${m.seats}/${m.seatsTotal}</b><span>seats declared</span></div>
@@ -384,7 +399,7 @@ async function stellies(){
     $("h-stellies").textContent = myName() + ", ward by ward";
     $("stelliesBody").innerHTML = pickerHtml() + `
       <div class="st-head">
-        <div><div class="st-big" style="color:${col("DA")}">${daPct.toFixed(1)}%</div><small>DA across ${myName()} · ${m ? m.vdPct.toFixed(0) : 0}% of districts counted</small></div>
+        <div><div class="st-big" style="color:${col("DA")}">${daPct.toFixed(1)}%</div><small>DA across ${myName()} · ${m ? m.vdPct.toFixed(0) : 0}% of districts counted ${vs21(daPct, past("2021", STELLIES, "DA"))}</small></div>
         <div class="st-score"><b>${daWins.length}</b> of ${wards.length} wards blue so far</div>
       </div>
       ${best ? `<div class="thanks"><span>Thank you, Ward ${best.no}</span><small>The most DA ward in ${myName()} so far: ${best.pct.toFixed(1)}% of the ward vote.</small></div>` : ""}
@@ -403,7 +418,11 @@ $("refresh").onclick = () => load(true);
 setInterval(() => { if(viewIdx === -1) load(false); else stamp(); }, 180000);
 addEventListener("resize", trend);
 document.addEventListener("visibilitychange", () => { if(!document.hidden && viewIdx === -1) load(false); });
-load(false).then(initMap);
+pastReady.finally(() => load(false).then(initMap));
 
 // count this visit (no cookies; see worker /api/hit)
-try{ navigator.sendBeacon(API + "/hit"); }catch(e){}
+try{
+  let vid = localStorage.getItem("vid");
+  if(!vid){ vid = Math.random().toString(36).slice(2) + Date.now().toString(36); localStorage.setItem("vid", vid); }
+  navigator.sendBeacon(API + "/hit", vid);
+}catch(e){}

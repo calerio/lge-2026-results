@@ -236,3 +236,10 @@ footer p a{color:#fff}
 .jhb-facts span{font-size:14px;color:var(--mute)}
 .jhb-go{min-height:48px;padding:0 20px;border:0;background:#f7a11f;color:var(--ink);font:700 15px var(--f-body);box-shadow:4px 4px 0 var(--red);cursor:pointer}
 .jhb-go:active{transform:translate(2px,2px);box-shadow:2px 2px 0 var(--red)}
+
+/* 2021 comparison */
+.track{position:relative}
+.tick21{position:absolute;top:-3px;bottom:-3px;width:2px;background:#16181d;opacity:.55;z-index:1}
+.was{display:block;font-size:11px;color:#6b6e75;font-weight:500}
+.vs21{font-weight:700;margin-left:4px;white-space:nowrap}.vs21.up{color:#1d7a3a}.vs21.dn{color:#b3261e}
+.was-line{margin:10px 0 0;font-size:13px;color:#55585f}

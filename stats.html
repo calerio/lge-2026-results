@@ -19,7 +19,8 @@ button{margin-top:16px;height:44px;padding:0 18px;border:0;background:#f7a11f;fo
 <button onclick="load()">Refresh</button></main>
 <script>
 async function load(){
-  const d = await fetch("https://lge2026.nologna.workers.dev/api/stats", {cache:"no-store"}).then(r => r.json());
+  const d = await fetch("https://lge2026.nologna.workers.dev/api/stats?key=" + encodeURIComponent(new URLSearchParams(location.hash.slice(1)).get("key") || ""), {cache:"no-store"}).then(r => r.json());
+  if(!d.days){ document.getElementById("big").textContent = "Wrong or missing key."; return; }
   const today = d.days[d.days.length - 1] || {views: 0, uniques: 0};
   document.getElementById("big").innerHTML = `<div><b>${today.uniques.toLocaleString("en-ZA")}</b><span>visitors today</span></div>
     <div><b>${today.views.toLocaleString("en-ZA")}</b><span>page views today</span></div>

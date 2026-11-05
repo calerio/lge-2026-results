@@ -119,8 +119,10 @@ export class Counter extends DurableObject {
   }
 }
 
-async function visitorHash(req, day) {
-  const raw = `${req.headers.get("CF-Connecting-IP")}|${req.headers.get("User-Agent")}|${day}|lge2026`;
+async function visitorHash(req, day, deviceId) {
+  // a random per-device ID from the page when available (people on one mobile network share an IP)
+  const who = /^[a-z0-9]{8,40}$/i.test(deviceId || "") ? deviceId : `${req.headers.get("CF-Connecting-IP")}|${req.headers.get("User-Agent")}`;
+  const raw = `${who}|${day}|lge2026`;
   const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(raw));
   return [...new Uint8Array(buf).slice(0, 12)].map(b => b.toString(16).padStart(2, "0")).join("");
 }
@@ -148,9 +150,11 @@ export default {
     if (p === "/api/hit" && req.method === "POST") {
       const day = new Date(Date.now() + 2 * 3600e3).toISOString().slice(0, 10);   // SAST date
       const stub = env.COUNTER.get(env.COUNTER.idFromName("site"));
-      ctx.waitUntil(visitorHash(req, day).then(h => stub.hit(day, h)));
+      const deviceId = (await req.text().catch(() => "")).slice(0, 64);
+      ctx.waitUntil(visitorHash(req, day, deviceId).then(h => stub.hit(day, h)));
       return new Response(null, { status: 204, headers: CORS });
     }
+    if (p === "/api/stats" && url.searchParams.get("key") !== env.STATS_KEY) return json({ error: "not found" });
     if (p === "/api/stats") return json(await env.COUNTER.get(env.COUNTER.idFromName("site")).stats(), { "Cache-Control": "no-store" });
     if (p === "/api/refresh" && req.method === "POST") {
       const gate = new Request("https://lge2026.internal/refresh-gate"), cache = caches.default;
