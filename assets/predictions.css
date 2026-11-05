@@ -1,0 +1,77 @@
+.pr-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:18px;margin:24px 0}
+.pr-card{background:#fff;border:1px solid #e3dccb;padding:22px}
+.pr-card h3{font:400 30px/1 "League Gothic",sans-serif;text-transform:uppercase;margin:0}
+.pr-meta{margin:6px 0 0;color:#55585f;font-size:14px}
+.pr-verdict{margin:12px 0 14px;font-weight:700;font-size:16px}
+.pr-wait{margin-top:14px;color:#55585f}
+.pr-row{display:grid;grid-template-columns:70px 1fr 74px;gap:10px;align-items:center;margin:10px 0}
+.pr-party{font-weight:700}
+.pr-track{position:relative;height:22px;background:#efe9db}
+.pr-track i{position:absolute;top:0;bottom:0}
+.pr-band{opacity:.3}
+.pr-mid{width:4px;margin-left:-2px}
+.pr-now{width:0;top:-4px!important;bottom:-4px!important;border-left:2px dashed #16181d}
+.pr-num{text-align:right;font-variant-numeric:tabular-nums;line-height:1.1}
+.pr-num b{display:block;font-size:17px}.pr-num small{color:#6b6e75;font-size:12px}
+.pr-key{display:flex;align-items:center;gap:6px;font-size:12px;color:#6b6e75;margin:4px 0 0}
+.k-band{display:inline-block;width:18px;height:10px;background:#2f6fdf;opacity:.3}
+.k-now{display:inline-block;width:0;height:12px;border-left:2px dashed #16181d;margin-left:10px}
+.pr-spark{margin:16px 0 0}.pr-spark figcaption{font-size:12px;color:#6b6e75;margin-bottom:4px}
+.pr-spark svg{width:100%;height:70px;display:block}
+.pr-axis{display:flex;justify-content:space-between;font-size:11px;color:#6b6e75}
+#how ol{padding-left:20px;line-height:1.55}#how li{margin:6px 0}
+.bt-wrap{overflow-x:auto}
+.bt{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums;font-size:14px}
+.bt th,.bt td{padding:8px 10px;border-bottom:1px solid #e3dccb;text-align:right;white-space:nowrap}
+.bt th:first-child,.bt td:first-child{text-align:left}
+.bt tr.miss td{color:#b3261e}
+@media(max-width:600px){.pr-grid{grid-template-columns:1fr}.pr-card{padding:16px}}
+/* v2: national card + metro table */
+.pr-national{margin-top:24px}
+.pr-nat-grid{display:grid;grid-template-columns:1.2fr 1fr;gap:28px;align-items:start}
+.pr-row{grid-template-columns:70px 1fr 64px 86px}
+.pr-was{font-size:12px;color:#6b6e75;text-align:right}
+.k-mid{display:inline-block;width:4px;height:12px;background:#2f6fdf;margin-left:10px}
+.pr-tablewrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.pr-table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+.pr-table th,.pr-table td{padding:12px 10px;border-bottom:1px solid #e3dccb;text-align:right;white-space:nowrap}
+.pr-table th:first-child,.pr-table td:first-child{text-align:left}
+.pr-table thead th{font-size:13px;color:#55585f;font-weight:600}
+.pr-line{cursor:pointer}.pr-line:hover,.pr-line:focus{background:#f6f1e6;outline:none}
+.pr-line th::before{content:"▸ ";color:#104bb4}.pr-line[aria-expanded=true] th::before{content:"▾ "}
+.pr-line small,.bt small{color:#6b6e75;font-weight:400}
+.pr-detail td{text-align:left!important;white-space:normal!important;background:#fbf8f1;padding:16px 14px!important}
+.pr-tag.wait{font-size:13px;color:#6b6e75}
+.bt-h{font:600 15px Inter,sans-serif;margin:18px 0 6px}
+.bt .muted{color:#9a9da3;text-align:center!important}
+.stale{margin:16px auto 0;max-width:1200px}
+@media(max-width:800px){.pr-nat-grid{grid-template-columns:1fr}}
+@media(max-width:600px){.pr-row{grid-template-columns:52px 1fr 58px}.pr-was{display:none}
+  .pr-table th,.pr-table td{padding:10px 6px;font-size:14px}}
+
+.pr-table thead th{font:600 13px Inter,sans-serif;letter-spacing:0;text-transform:none}
+.pr-table tbody th{font:700 16px Inter,sans-serif;text-transform:none}
+.pr-nat-solo{max-width:760px}
+
+.pr-table{table-layout:auto}
+.pr-sub{display:none}
+.pr-lead{margin:0 0 8px}
+@media(max-width:600px){
+  .pr-table .c-opt{display:none}
+  .pr-sub{display:block;font:500 12px Inter,sans-serif;color:#6b6e75;margin-top:2px}
+  .pr-tablewrap{overflow:visible}
+  .pr-table{table-layout:fixed}
+  .pr-table thead th:first-child{width:42%}
+  .pr-detail td{padding:12px 4px!important}
+  .pr-row{grid-template-columns:60px minmax(0,1fr) 62px;gap:8px}
+}
+
+@media(max-width:600px){
+  .pr-table .lg{display:none}
+  .pr-table tbody th{white-space:normal;font-size:15px;line-height:1.2}
+  .pr-table thead th:first-child{width:46%}
+  .pr-table td .rng{display:block;font-size:11px}
+  .pr-table td{vertical-align:top}
+}
+.bt-h4{font:600 14px Inter,sans-serif;color:#55585f;margin:14px 0 4px}
+@media(max-width:600px){.pr-table td+td{padding-left:12px}}

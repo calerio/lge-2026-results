@@ -84,8 +84,15 @@ def summarise(nat):
                 "reportDate": m.get("ReportDate")}
     return s
 
+CACHE_NOW = os.path.join(ROOT, "cache2026")   # gitignored: votes per voting district, for the national projection
+
+
 def ward_summary(mid):
     d = get(f"{EEID}Munic{mid}")
+    vd = {v["VotingDistrictID"]: {p["ID"]: p.get("TotalValidVotes", 0) for p in v["PartyBallotResults"]}
+          for w in d.get("WardResults", []) for v in w.get("VotingDistrictResults", [])}
+    os.makedirs(CACHE_NOW, exist_ok=True)
+    write(os.path.join(CACHE_NOW, f"{mid}.json"), {"prov": d.get("ProvinceID"), "vd": vd})
     out = {}
     for w in d.get("WardResults", []):
         votes = sorted(((p["WardVotes"], short(p["Name"])) for p in w["PartyBallotResults"]), reverse=True)
@@ -115,7 +122,8 @@ def main():
     # Wards: refetch only municipalities whose IEC report time moved (or that we have never fetched).
     changed = [mid for mid, m in s["munics"].items()
                if not prev or prev["munics"].get(mid, {}).get("reportDate") != m["reportDate"]
-               or not os.path.exists(os.path.join(ROOT, "wards", f"{mid}.json"))]
+               or not os.path.exists(os.path.join(ROOT, "wards", f"{mid}.json"))
+               or not os.path.exists(os.path.join(CACHE_NOW, f"{mid}.json"))]
     geo_p = os.path.join(ROOT, "..", "geo", "munics.json")
     if os.path.exists(geo_p):  # municipalities that have not reported yet still get their ward file
         ids = {str(f["properties"]["MunicId"]) for f in json.load(open(geo_p))["features"]}
