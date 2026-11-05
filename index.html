@@ -12,52 +12,49 @@
 <meta property="og:url" content="https://calerio.github.io/lge-2026-results/">
 <meta property="og:type" content="website">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="theme-color" content="#0d0f0c">
+<meta name="theme-color" content="#104bb4">
+<link rel="preload" href="assets/fonts/BowlbyOne-Regular.ttf" as="font" type="font/ttf" crossorigin>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,800&family=JetBrains+Mono:wght@400;600&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=League+Gothic&display=swap" rel="stylesheet">
 <link href="https://unpkg.com/maplibre-gl@5/dist/maplibre-gl.css" rel="stylesheet">
-<link href="assets/style.css?v=7" rel="stylesheet">
+<link href="assets/style.css?v=10" rel="stylesheet">
 </head>
 <body>
-<header class="top">
-  <div>
-    <div class="live" id="status">LOADING</div>
-    <h1>Local Government <br>Elections <em>2026</em></h1>
-  </div>
-  <div class="controls">
+<header class="status" id="statusbar">
+  <div class="st-row">
+    <div class="st-count"><span class="dot" id="dot" aria-hidden="true"></span><span class="pctnum" id="pct">–%</span><span class="pctlab" id="status">counted</span></div>
+    <div class="st-bar" id="progbar" role="progressbar" aria-label="Voting districts counted" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div id="progfill"></div></div>
+    <div class="st-time" id="stamp" aria-live="polite"></div>
+    <button id="golive" class="golive" hidden>Back to live</button>
     <button id="refresh" class="refresh" title="Load the newest results now">
-      <svg viewBox="0 0 24 24" width="22" height="22"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      <span>Refresh results</span>
+      <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span id="refreshLabel">Refresh</span>
     </button>
-    <div class="stamp mono" id="stamp"></div>
   </div>
 </header>
+<div id="stale" class="stale" role="status" hidden></div>
 
-<div id="stale" class="stale" hidden></div>
+<div class="masthead">
+  <h1>Local Elections 2026</h1>
+  <p>Live IEC results, updated as the count comes in</p>
+</div>
 
-<section class="timeline card">
-  <div class="tl-head">
-    <h2>Earlier counts</h2>
-    <button id="golive" class="chipbtn" hidden>Back to latest</button>
-  </div>
-  <input type="range" id="slider" min="0" max="0" value="0">
-  <div class="tl-label mono" id="tlLabel"></div>
-</section>
-
-<main class="grid">
-  <section class="card s12">
-    <h2>Party share, all ballots combined</h2>
+<main>
+  <section class="hero" aria-labelledby="h-hero">
+    <h2 id="h-hero">Party share, all ballots combined</h2>
     <div class="duel" id="duel"></div>
     <div class="tug" id="tug"></div>
+    <div class="tuglegend" id="tuglegend"></div>
+    <details class="countdet"><summary>Count details</summary><div class="kv" id="prog"></div></details>
   </section>
 
-  <section class="card s12 mapcard">
-    <h2 id="mapTitle">The map · click a municipality to see its wards</h2>
+  <section class="card mapcard" aria-labelledby="mapTitle">
+    <h2 id="mapTitle">The map</h2>
     <div class="mapwrap">
       <div class="mapview">
         <div id="map"></div>
         <div class="mapctl">
-          <button id="back" class="mapbtn" hidden>← South Africa</button>
+          <button id="back" class="mapbtn" hidden>← All municipalities</button>
           <input id="search" list="munlist" placeholder="Find a municipality…" autocomplete="off" aria-label="Find a municipality">
           <datalist id="munlist"></datalist>
         </div>
@@ -65,38 +62,36 @@
       <aside id="panel" class="panel"></aside>
     </div>
     <div class="legend" id="legend"></div>
-    <p class="note">Colour shows the leading party. Faded areas have little of the vote counted; grey areas have none. Boundaries: IEC 2026 municipal and ward maps (simplified).</p>
   </section>
 
-  <section class="card s8"><h2>Party share · change since the previous count</h2><div id="bars"></div></section>
+  <section class="plain" aria-labelledby="h-bars"><h2 id="h-bars">Party share</h2><div id="bars"></div></section>
 
-  <section class="card s4">
-    <h2>Count progress</h2>
-    <div class="ring"><svg id="ring" width="130" height="130" viewBox="0 0 130 130"></svg><div class="kv" id="prog"></div></div>
-    <p class="note">Results arrive voting district by voting district, so early leads can change.</p>
-  </section>
+  <section aria-labelledby="h-metros"><h2 id="h-metros">Metros</h2><div class="metros" id="metros"></div></section>
 
-  <section class="card s12"><h2>The metros</h2><div class="metros" id="metros"></div></section>
+  <section class="card" aria-labelledby="h-councils"><h2 id="h-councils">Councils</h2><div id="councils"></div></section>
 
-  <section class="card s6"><h2>Trend · party share as the count went on</h2><svg id="trend" width="100%" height="260"></svg></section>
+  <section class="card" aria-labelledby="h-provs"><h2 id="h-provs">Provinces</h2><div class="provs" id="provs"></div></section>
 
-  <section class="card s6"><h2>Councils · won outright and seats so far</h2><div id="councils"></div></section>
+  <section class="card" aria-labelledby="h-trend"><details class="trendbox" id="trendbox" open><summary><h2 id="h-trend">Trend</h2></summary><svg id="trend" width="100%" height="280"></svg></details></section>
 
-  <section class="card s12"><h2>Provinces</h2><div class="provs" id="provs"></div></section>
-
-  <section class="card s12 stellies" id="stellies">
-    <h2>Stellenbosch · ward by ward</h2>
+  <section class="card stellies" id="stellies" aria-labelledby="h-stellies">
+    <h2 id="h-stellies">Stellenbosch, ward by ward</h2>
     <div id="stelliesBody"><p class="note">Loading Stellenbosch…</p></div>
   </section>
+
+  <details class="timeline card" id="timeline">
+    <summary><span class="h2like">Earlier counts</span> <span id="tlCount"></span></summary>
+    <input type="range" id="slider" min="0" max="0" value="0" aria-label="Choose an earlier count">
+    <div class="tl-label" id="tlLabel"></div>
+  </details>
 </main>
 
 <footer>
-  Figures come from the Electoral Commission of South Africa's public results files
-  (<a href="https://results.elections.org.za/dashboards/lge/">results.elections.org.za</a>), checked automatically about every 5 minutes, and whenever someone presses Refresh.
-  They are provisional until the IEC declares the results. This page isn't affiliated with the IEC.
+  <a class="lockup" href="share/card.html"><span class="l1">Hot boys</span> <span class="l2">stem DA</span></a>
+  <p>Source: IEC results feed (<a href="https://results.elections.org.za/dashboards/lge/">results.elections.org.za</a>). Provisional until declared. Not affiliated with the IEC.</p>
 </footer>
 
 <script src="https://unpkg.com/maplibre-gl@5/dist/maplibre-gl.js"></script>
-<script src="assets/app.js?v=7"></script>
+<script src="assets/app.js?v=9"></script>
 </body>
 </html>

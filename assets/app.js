@@ -3,9 +3,13 @@
 const COL = {ANC:"#1f9d55",DA:"#2f6fdf",MK:"#4d8a6a",EFF:"#c8323a",ActionSA:"#38b6c9",PA:"#7a3fb0",IFP:"#e07b22",
   "FF+":"#f2a640",SACP:"#b5121b",UDM:"#d4b200",ACDP:"#2f9fb0",GOOD:"#e95d24",BOSA:"#6a8cff",Independent:"#c9c9c9",Other:"#5c6157"};
 const col = p => COL[p] || "#9aa093";
+const inkOn = c => { const h = c.replace("#",""), [r,g,b] = [0,2,4].map(i => parseInt(h.substr(i,2),16)/255).map(v => v <= .03928 ? v/12.92 : ((v+.055)/1.055)**2.4); return .2126*r+.7152*g+.0722*b > .45 ? "#16181d" : "#fff"; };
+const sw = p => `<i class="sw" style="background:${col(p)}"></i>`;
+const NOCOUNT = "#cfc8b8";
 const $ = id => document.getElementById(id);
 const fmt = n => (n ?? 0).toLocaleString("en-ZA");
 const when = d => new Date(d).toLocaleString("en-ZA",{weekday:"short",day:"numeric",month:"short",hour:"2-digit",minute:"2-digit",timeZone:"Africa/Johannesburg"}) + " SAST";
+const hm = d => new Date(d).toLocaleTimeString("en-ZA",{hour:"2-digit",minute:"2-digit",timeZone:"Africa/Johannesburg"});
 const bust = () => "?t=" + Date.now();
 const METROS = ["JHB","CPT","ETH","TSH","EKU","NMA","BUF","MAN"];
 
@@ -35,7 +39,7 @@ let latest = null, index = [], view = null, viewIdx = -1, map, munGeo, selMunic 
 async function getJSON(u){ const r = await fetch(u + bust()); if(!r.ok) throw new Error(u + " " + r.status); return r.json(); }
 
 async function load(manual){
-  const btn = $("refresh"); btn.classList.add("spin");
+  const btn = $("refresh"); btn.setAttribute("aria-busy","true"); if(manual) $("refreshLabel").textContent = "Refreshing…";
   try{
     if(manual) await fetch(API + "/refresh", {method:"POST"}).catch(() => {});   // ask the worker to check the IEC right now
     const [l, idx] = await Promise.all([apiOr("/latest", "data/latest.json"), apiOr("/index", "data/history/index.json").catch(()=>[])]);
@@ -45,9 +49,10 @@ async function load(manual){
     setupSlider();
     if(isNew || !$("stelliesBody").dataset.done){ $("stelliesBody").dataset.done = 1; stellies(); }
     if(isNew && selMunic) { delete wardCache[selMunic]; openMunic(selMunic, false); }
-    if(manual) flash(isNew ? "New results loaded" : "Already up to date");
+    if(manual){ $("refreshLabel").textContent = isNew ? "Updated" : "Up to date"; setTimeout(() => $("refreshLabel").textContent = "Refresh", 1500); }
+    if(isNew && manual && !matchMedia("(prefers-reduced-motion: reduce)").matches) ["pct","duel","bars"].forEach(id => { const e = $(id); e.classList.remove("flash"); void e.offsetWidth; e.classList.add("flash"); });
   }catch(e){ flash("Couldn't reach the results file. Try again shortly."); console.error(e); }
-  btn.classList.remove("spin"); stamp();
+  btn.removeAttribute("aria-busy"); if($("refreshLabel").textContent === "Refreshing…") $("refreshLabel").textContent = "Refresh"; stamp();
 }
 
 function flash(msg){ const s = $("stamp"); s.dataset.msg = msg; stamp(); setTimeout(()=>{ delete s.dataset.msg; stamp(); }, 3500); }
@@ -55,8 +60,8 @@ function flash(msg){ const s = $("stamp"); s.dataset.msg = msg; stamp(); setTime
 function stamp(){
   if(!latest) return;
   const s = $("stamp"), mins = Math.round((Date.now() - new Date(lastCheck && new Date(lastCheck) > new Date(latest.fetchedAt) ? lastCheck : latest.fetchedAt)) / 60000);
-  s.innerHTML = (s.dataset.msg ? `<b style="color:var(--gold)">${s.dataset.msg}</b><br>` : "") +
-    `IEC report time: ${when(latest.reportDate)}<br>Last checked: ${mins < 1 ? "just now" : mins + " min ago"}`;
+  const t = hm(latest.reportDate), ago = mins < 1 ? "just now" : mins + " min ago";
+  s.innerHTML = s.dataset.msg ? `<b>${s.dataset.msg}</b>` : `<span class="long">IEC report <b>${t}</b> · checked ${ago}</span><span class="short"><b>${t}</b> · ${ago}</span>`;
   const n = latest.national, done = n.vd >= n.vdTotal && n.vdTotal > 0;
   const st = $("stale");
   if(mins > 45 && !done){ st.hidden = false; st.textContent = `The automatic update last ran ${mins} minutes ago, so these figures may be out of date. The IEC's own site is at results.elections.org.za.`; }
@@ -76,11 +81,13 @@ async function show(i){
   if(i !== -1 && !view.munics) view.munics = {};
   const past = i !== -1;
   $("golive").hidden = !past;
-  $("tlLabel").textContent = (past ? "Showing an earlier count: " : "Showing the latest count: ") + when(view.reportDate) +
-    (index.length ? `  ·  ${index.length} counts recorded` : "");
+  $("tlLabel").textContent = (past ? "Showing an earlier count: " : "Showing the latest count: ") + when(view.reportDate);
+  $("tlCount").textContent = index.length ? `· ${index.length} recorded` : "";
   const n = view.national, pct = n.vdTotal ? n.vd / n.vdTotal * 100 : 0;
-  const st = $("status"); st.className = "live" + (past ? " past" : "");
-  st.textContent = past ? "EARLIER COUNT · " + pct.toFixed(0) + "% COUNTED" : pct >= 99.9 ? "COUNT COMPLETE · PROVISIONAL" : "LIVE · " + pct.toFixed(0) + "% COUNTED";
+  $("statusbar").classList.toggle("past", past);
+  $("pct").textContent = pct.toFixed(0) + "%";
+  $("status").textContent = past ? "counted · viewing " + hm(view.reportDate) + " count" : pct >= 99.9 ? "counted · provisional" : "counted";
+  $("progfill").style.width = pct + "%"; $("progbar").setAttribute("aria-valuenow", pct.toFixed(0));
   render(view, i === -1 ? index.length - 2 : i - 1);
   paintMap();
 }
@@ -95,60 +102,56 @@ function render(s, prevI){
   const n = s.national, parties = n.parties.filter(p => p.pct > 0);
   const prev = prevI >= 0 && index[prevI] ? index[prevI].parties : null;
   const [a, b] = parties;
-  $("duel").innerHTML = `<div><div class="mono" style="color:${col(a.short)}">${a.short} AHEAD</div><div class="big" style="color:${col(a.short)}">${a.pct.toFixed(1)}%</div><small>${fmt(a.votes)} votes</small></div>
-    <div class="gap">gap<b>${(a.pct - b.pct).toFixed(2)} pts</b></div>
-    <div class="r"><div class="mono" style="color:${col(b.short)}">${b.short}</div><div class="big" style="color:${col(b.short)}">${b.pct.toFixed(1)}%</div><small>${fmt(b.votes)} votes</small></div>`;
-  $("tug").innerHTML = parties.map(p => `<div title="${p.name} ${p.pct}%" style="width:${p.pct}%;background:${col(p.short)}"></div>`).join("");
+  $("duel").innerHTML = `<div><div class="lab" style="color:${col(a.short)}">${a.short} ahead</div><div class="big" style="color:${col(a.short)}">${a.pct.toFixed(1)}%</div><small>${fmt(a.votes)} votes</small></div>
+    <div class="gap"><b>${(a.pct - b.pct).toFixed(2)}</b><small>pts gap</small></div>
+    <div class="r"><div class="lab" style="color:${col(b.short)}">${b.short}</div><div class="big" style="color:${col(b.short)}">${b.pct.toFixed(1)}%</div><small>${fmt(b.votes)} votes</small></div>`;
+  $("tug").innerHTML = parties.map(p => `<div title="${p.name} ${p.pct}%" aria-label="${p.short} ${p.pct}%" style="flex:${p.pct} 0 0;background:${col(p.short)}"></div>`).join("");
+  $("tuglegend").innerHTML = parties.slice(0, 5).map(p => `<span>${sw(p.short)}<b>${p.short}</b> ${p.pct.toFixed(1)}%</span>`).join("");
 
   const max = Math.max(...parties.map(p => p.pct));
-  $("bars").innerHTML = parties.map(p => {
+  const barRow = p => {
     const d = prev && prev[p.short] != null ? p.pct - prev[p.short] : null;
-    const dh = d == null || Math.abs(d) < .005 ? "" : `<span class="delta ${d >= 0 ? "up" : "dn"}">${d >= 0 ? "▲" : "▼"}${Math.abs(d).toFixed(2)}</span>`;
-    return `<div class="bar" title="${p.name}"><span class="mono">${p.short}</span><div class="track"><div class="fill" style="width:0;background:${col(p.short)}" data-w="${p.pct / max * 100}"></div></div><span class="mono">${p.pct.toFixed(2)}${dh}</span></div>`;
-  }).join("");
+    const dh = d == null || Math.abs(d) < .005 ? "" : `<span class="delta ${d >= 0 ? "up" : "dn"}">${d >= 0 ? "▲ +" : "▼ −"}${Math.abs(d).toFixed(2)}</span>`;
+    return `<div class="bar" title="${p.name}"><span>${p.short}</span><div class="track"><div class="fill" style="width:0;background:${col(p.short)}" data-w="${p.pct / max * 100}"></div></div><span>${p.pct.toFixed(2)}%${dh}</span></div>`;
+  };
+  $("bars").innerHTML = parties.slice(0, 8).map(barRow).join("") + (parties.length > 8 ? `<details class="moreparties"><summary>Show all parties (${parties.length})</summary>${parties.slice(8).map(barRow).join("")}</details>` : "");
   requestAnimationFrame(() => document.querySelectorAll(".fill").forEach(f => f.style.width = f.dataset.w + "%"));
 
-  const pct = n.vdTotal ? n.vd / n.vdTotal * 100 : 0, R = 55, L = 2 * Math.PI * R;
-  $("ring").innerHTML = `<circle cx="65" cy="65" r="${R}" fill="none" stroke="#20251e" stroke-width="12"/>
-    <circle cx="65" cy="65" r="${R}" fill="none" stroke="var(--gold)" stroke-width="12" stroke-dasharray="${L * pct / 100} ${L}" transform="rotate(-90 65 65)"/>
-    <text x="65" y="72" text-anchor="middle" style="font:800 24px Fraunces;fill:var(--ink)">${pct.toFixed(0)}%</text>`;
-  $("prog").innerHTML = `<span>Voting districts</span><span class="mono">${fmt(n.vd)} / ${fmt(n.vdTotal)}</span>
-    <span>Votes cast</span><span class="mono">${fmt(n.cast)}</span>
-    <span>Spoilt</span><span class="mono">${fmt(n.spoilt)}</span>
-    <span>Councils decided</span><span class="mono">${n.councilsDone} / ${n.councilsTotal}</span>
-    <span>Hung so far</span><span class="mono">${n.hung}</span>`;
+  $("prog").innerHTML = `<span>Voting districts</span><span>${fmt(n.vd)} / ${fmt(n.vdTotal)}</span>
+    <span>Votes cast</span><span>${fmt(n.cast)}</span>
+    <span>Spoilt</span><span>${fmt(n.spoilt)}</span>
+    <span>Councils decided</span><span>${n.councilsDone} / ${n.councilsTotal}</span>
+    <span>Hung so far</span><span>${n.hung}</span>`;
 
   const full = s.munics && !Array.isArray(Object.values(s.munics)[0]) ? s.munics : latest.munics;
   $("metros").innerHTML = METROS.map(code => {
     const [id, m] = Object.entries(full).find(([, m]) => m.code === code) || [];
     if(!m) return "";
-    const L = munLeader(id); if(!L) return `<div class="metro" data-id="${id}"><h3>${m.name}</h3><small>No votes counted yet</small></div>`;
+    const L = munLeader(id); if(!L) return `<button class="metro" data-id="${id}"><h3>${m.name}</h3><small>No votes counted yet</small></button>`;
     const second = m.parties[1];
-    return `<div class="metro" data-id="${id}"><h3>${m.name}</h3><div class="sh" style="color:${col(L.p)}">${L.pct.toFixed(1)}%</div>
-      <span class="chip" style="background:${col(L.p)}">${L.p}</span>${second && viewIdx === -1 ? ` <small>next: ${second[0]} ${second[1].toFixed(1)}%</small>` : ""}
-      <div><small>${L.pct >= 50 ? "majority on current count" : "short of a majority"} · ${L.vd.toFixed(0)}% counted</small></div>
-      <div class="prog" style="width:${L.vd}%;background:${col(L.p)}"></div></div>`;
+    return `<button class="metro" data-id="${id}"><h3>${m.name}</h3><div class="sh" style="color:${col(L.p)}">${L.pct.toFixed(1)}%</div>
+      <span class="who">${sw(L.p)}${L.p}${second && viewIdx === -1 ? ` <small>· next ${second[0]} ${second[1].toFixed(1)}%</small>` : ""}</span>
+      <small>${L.vd.toFixed(0)}% counted</small>
+      <div class="prog" style="width:${L.vd}%"></div></button>`;
   }).join("");
-  document.querySelectorAll(".metro").forEach(el => el.onclick = () => { openMunic(el.dataset.id, true); $("map").scrollIntoView({behavior:"smooth", block:"center"}); });
+  document.querySelectorAll(".metro").forEach(el => el.onclick = () => { openMunic(el.dataset.id, true); $("mapTitle").scrollIntoView({behavior:"smooth", block:"start"}); });
 
   const cp = parties.filter(p => p.councils || p.seats).slice(0, 9);
   const maxS = Math.max(...cp.map(p => p.seats), 1);
-  $("councils").innerHTML = cp.map(p => `<div class="bar"><span class="mono">${p.short}</span>
-    <div class="track"><div style="width:${p.seats / maxS * 100}%;background:${col(p.short)}"></div></div>
-    <span class="mono">${fmt(p.seats)} · ${p.councils}</span></div>`).join("") +
-    `<p class="note">Seats so far · councils won. ${n.majority} councils have a majority party; ${n.hung} are hung.</p>`;
-
-  $("provs").innerHTML = (s.provinces || []).map(pr => {
+  $("councils").innerHTML = `<div class="tablewrap"><table><thead><tr><th>Party</th><th class="n">Seats</th><th class="n">Councils won</th></tr></thead><tbody>` +
+    cp.map(p => `<tr><td><span class="chip"><i style="background:${col(p.short)}"></i>${p.short}</span></td><td class="n">${fmt(p.seats)}</td><td class="n">${p.councils}</td></tr>`).join("") +
+    `</tbody></table></div><p class="note">${n.majority} councils with a majority · ${n.hung} hung</p>`;
+  $("provs").innerHTML = `<div class="tablewrap"><table><thead><tr><th>Province</th><th>Share</th><th>Top three</th><th class="n">Counted</th><th class="n">Hung</th></tr></thead><tbody>` + (s.provinces || []).map(pr => {
     const ps = pr.parties.filter(p => p.pct > 0), pp = pr.vdTotal ? pr.vd / pr.vdTotal * 100 : 0;
-    return `<div class="prov"><h3>${pr.name}</h3><div class="stack">${ps.map(p => `<div title="${p.short} ${p.pct}%" style="width:${p.pct}%;background:${col(p.short)}"></div>`).join("")}</div>
-      ${ps.slice(0, 3).map(p => `<span class="chip" style="background:${col(p.short)}">${p.short} ${p.pct.toFixed(1)}%</span>`).join(" ")}
-      <div><small>${pp.toFixed(0)}% of districts counted · ${pr.hung} hung councils</small></div></div>`;
-  }).join("");
+    return `<tr><td><b>${pr.name}</b></td><td><div class="stack">${ps.map(p => `<div title="${p.short} ${p.pct}%" style="flex:${p.pct} 0 0;background:${col(p.short)}"></div>`).join("")}</div></td>
+      <td>${ps.slice(0, 3).map(p => `<span class="chip"><i style="background:${col(p.short)}"></i>${p.short} ${p.pct.toFixed(1)}%</span>`).join(" &nbsp;")}</td>
+      <td class="n">${pp.toFixed(0)}%</td><td class="n">${pr.hung}</td></tr>`;
+  }).join("") + `</tbody></table></div>`;
   trend();
 }
 
 function trend(){
-  const svg = $("trend"), W = svg.clientWidth || 520, H = 260, P = 36;
+  const svg = $("trend"), W = svg.clientWidth || 520, H = 280, P = 36;
   if(index.length < 2){ svg.innerHTML = `<text x="${W/2}" y="${H/2}" text-anchor="middle">The trend appears once there are two or more counts.</text>`; return; }
   const lastParties = index[index.length - 1].parties;
   const parties = Object.keys(lastParties).filter(p => p !== "Other").slice(0, 6);
@@ -156,35 +159,35 @@ function trend(){
   const lo = Math.max(0, Math.floor(Math.min(...index.map(s => s.vdPct)) / 5) * 5), hi = Math.min(100, Math.ceil(Math.max(...index.map(s => s.vdPct)) / 5) * 5 + 5);
   const x = v => P + (v - lo) / (hi - lo) * (W - 2 * P - 30), y = v => H - P - v / top * (H - 2 * P);
   let g = "";
-  for(let v = 0; v <= top; v += 10) g += `<line x1="${P}" x2="${W - P}" y1="${y(v)}" y2="${y(v)}" stroke="#2a3027"/><text x="2" y="${y(v) + 4}">${v}%</text>`;
+  for(let v = 0; v <= top; v += 10) g += `<line x1="${P}" x2="${W - P}" y1="${y(v)}" y2="${y(v)}" stroke="#ddd5c4"/><text x="2" y="${y(v) + 4}">${v}%</text>`;
   [lo, (lo + hi) / 2, hi].forEach(v => g += `<text x="${x(v)}" y="${H - 12}" text-anchor="middle">${Math.round(v)}%</text>`);
   g += `<text x="${W - P}" y="${H - 1}" text-anchor="end">share of districts counted →</text>`;
   parties.forEach(p => {
     const pts = index.filter(s => s.parties[p] != null).map(s => [x(s.vdPct), y(s.parties[p])]);
-    g += `<polyline fill="none" stroke="${col(p)}" stroke-width="2.4" points="${pts.join(" ")}"/>` + pts.map(([a, b]) => `<circle cx="${a}" cy="${b}" r="2.5" fill="${col(p)}"/>`).join("");
-    const [lx, ly] = pts[pts.length - 1]; g += `<text x="${lx + 4}" y="${ly + 4}" style="fill:${col(p)}">${p}</text>`;
+    g += `<polyline fill="none" stroke="${col(p)}" stroke-width="2.5" points="${pts.join(" ")}"/>` + pts.map(([a, b]) => `<circle cx="${a}" cy="${b}" r="2.5" fill="${col(p)}"/>`).join("");
+    const [lx, ly] = pts[pts.length - 1]; g += `<text x="${lx + 4}" y="${ly + 4}" style="fill:${col(p)};font-weight:700">${p}</text>`;
   });
-  if(viewIdx !== -1) g += `<line x1="${x(index[viewIdx].vdPct)}" x2="${x(index[viewIdx].vdPct)}" y1="${P / 2}" y2="${H - P}" stroke="#9ab4ff" stroke-dasharray="4 3"/>`;
+  if(viewIdx !== -1) g += `<line x1="${x(index[viewIdx].vdPct)}" x2="${x(index[viewIdx].vdPct)}" y1="${P / 2}" y2="${H - P}" stroke="#0b357f" stroke-dasharray="4 3"/>`;
   svg.innerHTML = g;
 }
 
 /* ---------------- map ---------------- */
 function initMap(){
-  map = new maplibregl.Map({container:"map", style:"https://tiles.openfreemap.org/styles/dark",
+  map = new maplibregl.Map({container:"map", style:"https://tiles.openfreemap.org/styles/positron",
     bounds:[[16.3, -35], [33, -22]], fitBoundsOptions:{padding:20}, attributionControl:{compact:true}});
   map.addControl(new maplibregl.NavigationControl({showCompass:false}), "top-right");
   map.on("load", async () => {
     munGeo = await getJSON("geo/munics.json");
     munGeo.features.forEach(f => f.id = f.properties.MunicId);
     map.addSource("mun", {type:"geojson", data:munGeo});
-    map.addLayer({id:"mun-fill", type:"fill", source:"mun", paint:{"fill-color":["coalesce", ["feature-state", "c"], "#2b3029"],
+    map.addLayer({id:"mun-fill", type:"fill", source:"mun", paint:{"fill-color":["coalesce", ["feature-state", "c"], NOCOUNT],
       "fill-opacity":["coalesce", ["feature-state", "o"], .6]}});
-    map.addLayer({id:"mun-line", type:"line", source:"mun", paint:{"line-color":"#0d0f0c", "line-width":["interpolate", ["linear"], ["zoom"], 4, .4, 9, 1.4]}});
-    map.addLayer({id:"mun-sel", type:"line", source:"mun", paint:{"line-color":"#fff", "line-width":2.2}, filter:["==", ["id"], -1]});
+    map.addLayer({id:"mun-line", type:"line", source:"mun", paint:{"line-color":"#ffffff", "line-width":["interpolate", ["linear"], ["zoom"], 4, .4, 9, 1.4]}});
+    map.addLayer({id:"mun-sel", type:"line", source:"mun", paint:{"line-color":"#16181d", "line-width":2.2}, filter:["==", ["id"], -1]});
     map.addSource("ward", {type:"geojson", data:{type:"FeatureCollection", features:[]}});
     map.addLayer({id:"ward-fill", type:"fill", source:"ward", paint:{"fill-color":["get", "c"], "fill-opacity":["get", "o"]}});
-    map.addLayer({id:"ward-line", type:"line", source:"ward", paint:{"line-color":"#0d0f0c", "line-width":.8}});
-    map.addLayer({id:"ward-hi", type:"line", source:"ward", paint:{"line-color":"#fff", "line-width":2}, filter:["==", ["get", "WardId"], -1]});
+    map.addLayer({id:"ward-line", type:"line", source:"ward", paint:{"line-color":"#ffffff", "line-width":.8}});
+    map.addLayer({id:"ward-hi", type:"line", source:"ward", paint:{"line-color":"#16181d", "line-width":2}, filter:["==", ["get", "WardId"], -1]});
     const list = $("munlist");
     munGeo.features.map(f => f.properties).sort((a, b) => nice(a).localeCompare(nice(b)))
       .forEach(p => list.insertAdjacentHTML("beforeend", `<option value="${nice(p)}">`));
@@ -212,11 +215,11 @@ function paintMap(){
   if(!map || !munGeo || !map.getSource("mun")) return;
   munGeo.features.forEach(f => {
     const L = munLeader(String(f.id));
-    map.setFeatureState({source:"mun", id:f.id}, L && L.vd > 0 ? {c:col(L.p), o:.25 + .65 * Math.min(L.vd, 100) / 100} : {c:"#2b3029", o:.6});
+    map.setFeatureState({source:"mun", id:f.id}, L && L.vd > 0 ? {c:col(L.p), o:.25 + .65 * Math.min(L.vd, 100) / 100} : {c:NOCOUNT, o:.6});
   });
   const seen = new Set();
   Object.keys(view.munics).forEach(id => { const L = munLeader(id); if(L) seen.add(L.p); });
-  $("legend").innerHTML = [...seen].map(p => `<span class="chip" style="background:${col(p)}">${p}</span>`).join("") + `<span class="chip" style="background:#2b3029;color:var(--ink)">not counted</span>`;
+  $("legend").innerHTML = [...seen].map(p => `<span class="chip"><i style="background:${col(p)}"></i>${p}</span>`).join("") + `<span class="chip"><i style="background:${NOCOUNT};opacity:.6"></i>Not counted</span>`;
   if(selMunic) nationalOrMunicPanel();
 }
 
@@ -229,7 +232,7 @@ function bbox(geom){
 async function openMunic(id, fly){
   const f = munGeo && munGeo.features.find(f => String(f.id) === String(id)); if(!f) return;
   selMunic = String(id); history.replaceState(null, "", "#m/" + id);
-  $("back").hidden = false; $("mapTitle").textContent = "The map · " + nice(f.properties) + " by ward";
+  $("back").hidden = false; $("mapTitle").textContent = "The map: " + nice(f.properties);
   map.setFilter("mun-sel", ["==", ["id"], f.id]);
   map.setPaintProperty("mun-fill", "fill-opacity", ["case", ["==", ["id"], f.id], 0, ["*", .35, ["coalesce", ["feature-state", "o"], .6]]]);
   if(fly) map.fitBounds(bbox(f.geometry), {padding:30, duration:900});
@@ -240,7 +243,7 @@ async function openMunic(id, fly){
     if(selMunic !== String(id)) return;
     geo.features.forEach(w => {
       const r = res[w.properties.WardId], t = r && r.top[0];
-      Object.assign(w.properties, {c: t ? col(t[0]) : "#2b3029", o: t ? .3 + .6 * (r.vdTotal ? r.vd / r.vdTotal : 0) : .5, r: JSON.stringify(r || null)});
+      Object.assign(w.properties, {c: t ? col(t[0]) : NOCOUNT, o: t ? .3 + .6 * (r.vdTotal ? r.vd / r.vdTotal : 0) : .5, r: JSON.stringify(r || null)});
     });
     map.getSource("ward").setData(geo);
   }catch(e){ console.error(e); }
@@ -248,7 +251,7 @@ async function openMunic(id, fly){
 
 function closeMunic(){
   selMunic = null; history.replaceState(null, "", location.pathname);
-  $("back").hidden = true; $("mapTitle").textContent = "The map · click a municipality to see its wards";
+  $("back").hidden = true; $("mapTitle").textContent = "The map";
   map.getSource("ward").setData({type:"FeatureCollection", features:[]});
   map.setFilter("mun-sel", ["==", ["id"], -1]);
   map.setPaintProperty("mun-fill", "fill-opacity", ["coalesce", ["feature-state", "o"], .6]);
@@ -262,10 +265,10 @@ function wardHtml(p, short){
   const head = `<b>Ward ${p.WardNo}</b> · ${r.vd}/${r.vdTotal} districts counted`;
   if(short) return head + `<br>${r.top.map(t => `${t[0]} ${t[1]}%`).join(" · ")}`;
   return `<h3>Ward ${p.WardNo}</h3><small>${r.vd} of ${r.vdTotal} voting districts counted · ${fmt(r.votes)} ward votes</small>` +
-    r.top.map(t => `<div class="row"><span class="mono">${t[0]}</span><div class="track" style="height:12px"><div style="width:${t[1]}%;background:${col(t[0])}"></div></div><span class="mono">${t[1]}%</span></div>`).join("") +
-    `<p class="note">Ward ballot only. Top three parties shown.</p>`;
+    r.top.map(t => `<div class="row"><span>${t[0]}</span><div class="track" style="height:12px"><div style="width:${t[1]}%;background:${col(t[0])}"></div></div><span>${t[1]}%</span></div>`).join("") +
+    "";
 }
-function showWardPanel(p){ $("panel").innerHTML = `<button class="back" onclick="nationalOrMunicPanel()">← ${latest.munics[selMunic]?.name || "Municipality"}</button>` + wardHtml(p, false) + ""; }
+function showWardPanel(p){ if(matchMedia("(max-width:900px)").matches) setTimeout(() => $("panel").scrollIntoView({behavior:"smooth", block:"nearest"}), 50); $("panel").innerHTML = `<button class="back" onclick="nationalOrMunicPanel()">← ${latest.munics[selMunic]?.name || "Municipality"}</button>` + wardHtml(p, false) + ""; }
 
 function nationalOrMunicPanel(){
   if(!selMunic) return nationalPanel();
@@ -273,21 +276,35 @@ function nationalOrMunicPanel(){
   if(!m){ $("panel").innerHTML = `<h3>${nice(f.properties)}</h3><small>No results reported yet.</small>`; return; }
   const L = munLeader(selMunic);
   $("panel").innerHTML = `<small>${m.prov}</small><h3>${m.name}</h3>
+    ${selMunic === STELLIES ? `<p class="pinned">📌 Your municipality</p>` : `<button class="pinbtn" onclick="pinMunic('${selMunic}');document.getElementById('stellies').scrollIntoView({behavior:'smooth'})">📌 Pin as my municipality</button>`}
     <small>${(viewIdx === -1 ? m.vdPct : L?.vd ?? 0).toFixed(0)}% of districts counted · ${m.seats}/${m.seatsTotal} seats declared</small>
-    ${m.winner ? `<p><span class="chip" style="background:${col(m.winner)}">${m.winner} wins the council</span></p>` : m.hung ? `<p><span class="chip" style="background:#888">Hung council</span></p>` : ""}
+    ${m.winner ? `<p><span class="badge" style="background:${col(m.winner)};color:${inkOn(col(m.winner))}">${m.winner} wins the council</span></p>` : m.hung ? `<p><span class="badge" style="background:#555b66;color:#fff">Hung council</span></p>` : ""}
     ${viewIdx !== -1 ? `<p class="note">Earlier count: ${L ? `${L.p} led with ${L.pct.toFixed(1)}%` : "nothing counted"}. Breakdown below is the latest.</p>` : ""}
-    ${m.parties.map(p => `<div class="row"><span class="mono">${p[0]}</span><div class="track" style="height:12px"><div style="width:${p[1]}%;background:${col(p[0])}"></div></div><span class="mono">${p[1].toFixed(1)}%</span></div>`).join("")}
-    <p class="note">Hover or click a ward on the map for its result.</p>`;
+    ${m.parties.map(p => `<div class="row"><span>${p[0]}</span><div class="track" style="height:12px"><div style="width:${p[1]}%;background:${col(p[0])}"></div></div><span>${p[1].toFixed(1)}%</span></div>`).join("")}`;
 }
 
 function nationalPanel(){
   $("panel").innerHTML = `<h3>South Africa</h3><small>213 councils · ${fmt(latest.national.registered)} registered voters</small>
-    <p class="note" style="margin-top:12px">Click any municipality, or use the search box on the map, to zoom in and see every ward.</p>
-    <p class="note">Metro cards below also jump straight to the city.</p>`;
+    <p class="note" style="margin-top:12px">Pick a municipality to see its wards.</p>`;
 }
 
 /* ---------------- Stellenbosch ---------------- */
-const STELLIES = "9911";
+// "My municipality": Stellenbosch by default; visitors can pin their own (remembered on their device).
+let STELLIES = localStorage.getItem("myMunic") || "9911";
+const myName = () => latest?.munics[STELLIES]?.name || (munGeo && nice(munGeo.features.find(f => String(f.id) === STELLIES)?.properties || {})) || "Stellenbosch";
+function pinMunic(id){
+  STELLIES = String(id); localStorage.setItem("myMunic", STELLIES);
+  $("stelliesBody").innerHTML = `<p class="note">Loading…</p>`; stellies();
+  if(selMunic) nationalOrMunicPanel();
+}
+function pickerHtml(){
+  return `<div class="st-pick"><input id="stPick" list="munlist" placeholder="Change municipality…" autocomplete="off" aria-label="Change municipality">
+    ${STELLIES !== "9911" ? `<button class="st-reset" id="stReset">Back to Stellenbosch</button>` : ""}</div>`;
+}
+function wirePicker(){
+  const i = $("stPick"); if(i) i.onchange = () => { const f = munGeo?.features.find(f => nice(f.properties).toLowerCase() === i.value.toLowerCase()); if(f) pinMunic(f.id); };
+  const r = $("stReset"); if(r) r.onclick = () => pinMunic("9911");
+}
 async function stellies(){
   try{
     const d = await fetch(`${API}/wards/${STELLIES}`).then(r => r.json());
@@ -302,20 +319,22 @@ async function stellies(){
     const counted = wards.filter(w => w.tot), daWins = counted.filter(w => w.lead === "DA"), best = counted[0];
     const m = latest.munics[STELLIES];
     const daPct = m && m.parties[0] ? (m.parties.find(p => p[0] === "DA") || [0, 0])[1] : 0;
-    $("stelliesBody").innerHTML = `
+    $("h-stellies").textContent = myName() + ", ward by ward";
+    $("stelliesBody").innerHTML = pickerHtml() + `
       <div class="st-head">
-        <div><div class="st-big" style="color:${col("DA")}">${daPct.toFixed(1)}%</div><small>DA across Stellenbosch · ${m ? m.vdPct.toFixed(0) : 0}% of districts counted</small></div>
+        <div><div class="st-big" style="color:${col("DA")}">${daPct.toFixed(1)}%</div><small>DA across ${myName()} · ${m ? m.vdPct.toFixed(0) : 0}% of districts counted</small></div>
         <div class="st-score"><b>${daWins.length}</b> of ${wards.length} wards blue so far</div>
       </div>
-      ${best ? `<div class="thanks"><span>Thank you, Ward ${best.no}</span><small>The most DA ward in Stellenbosch so far: ${best.pct.toFixed(1)}% of the ward vote.</small></div>` : ""}
+      ${best ? `<div class="thanks"><span>Thank you, Ward ${best.no}</span><small>The most DA ward in ${myName()} so far: ${best.pct.toFixed(1)}% of the ward vote.</small></div>` : ""}
       <div class="st-wards">${wards.map(w => `<button class="st-ward" data-no="${w.no}" title="Show on the map">
-        <span class="mono">Ward ${w.no}</span>
+        <span>Ward ${w.no}</span>
         <div class="track"><div style="width:${w.pct}%;background:${col("DA")}"></div></div>
-        <span class="mono">${w.tot ? w.pct.toFixed(1) + "%" : "—"}</span>
+        <span>${w.tot ? w.pct.toFixed(1) + "%" : "—"}</span>
         <small>${w.tot ? (w.lead === "DA" ? "DA ahead" : w.lead + " ahead") + ` · ${w.vd}/${w.vdTotal} counted` : "not counted yet"}</small></button>`).join("")}</div>
       ${daWins.length ? `<p class="thanks-all">💙 Thank you to every ward voting blue: ${daWins.map(w => "Ward " + w.no).join(", ")}.</p>` : ""}`;
-    document.querySelectorAll(".st-ward").forEach(b => b.onclick = () => { openMunic(STELLIES, true); $("map").scrollIntoView({behavior:"smooth", block:"center"}); });
-  }catch(e){ $("stelliesBody").innerHTML = `<p class="note">Couldn't load Stellenbosch's wards right now.</p>`; }
+    wirePicker();
+    document.querySelectorAll(".st-ward").forEach(b => b.onclick = () => { openMunic(STELLIES, true); $("mapTitle").scrollIntoView({behavior:"smooth", block:"start"}); });
+  }catch(e){ $("stelliesBody").innerHTML = pickerHtml() + `<p class="note">Couldn't load ${myName()}'s wards right now.</p>`; wirePicker(); }
 }
 
 $("refresh").onclick = () => load(true);
