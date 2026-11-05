@@ -9,6 +9,27 @@ const when = d => new Date(d).toLocaleString("en-ZA",{weekday:"short",day:"numer
 const bust = () => "?t=" + Date.now();
 const METROS = ["JHB","CPT","ETH","TSH","EKU","NMA","BUF","MAN"];
 
+const API = "https://lge2026.nologna.workers.dev/api";
+// Ward ballot leaders for one municipality, from the IEC's raw file (same logic as scripts/update.py).
+function wardSummary(d){
+  const out = {};
+  for(const w of d.WardResults || []){
+    const votes = w.PartyBallotResults.map(p => [p.WardVotes, shortName(p.Name)]).sort((a, b) => b[0] - a[0]);
+    const total = votes.reduce((t, v) => t + v[0], 0);
+    const vds = w.VotingDistrictResults || [];
+    const vd = vds.filter(v => (v.PartyBallotResults || []).some(p => p.TotalValidVotes)).length;
+    out[w.WardID] = {top: total ? votes.slice(0, 3).filter(v => v[0]).map(([v, n]) => [n, Math.round(1000 * v / total) / 10, v]) : [], votes: total, vd, vdTotal: vds.length};
+  }
+  return out;
+}
+const SHORTN = {"AFRICAN NATIONAL CONGRESS":"ANC","DEMOCRATIC ALLIANCE":"DA","UMKHONTO WESIZWE PARTY":"MK","ECONOMIC FREEDOM FIGHTERS":"EFF",
+  "INKATHA FREEDOM PARTY":"IFP","PATRIOTIC ALLIANCE":"PA","ACTIONSA":"ActionSA","VRYHEIDSFRONT PLUS | FREEDOM FRONT PLUS":"FF+",
+  "SOUTH AFRICAN COMMUNIST PARTY":"SACP","IND":"Independent","UNITED DEMOCRATIC MOVEMENT":"UDM","AFRICAN CHRISTIAN DEMOCRATIC PARTY":"ACDP",
+  "GOOD":"GOOD","AL JAMA-AH":"Al Jama-ah","BUILD ONE SOUTH AFRICA":"BOSA","RISE MZANSI":"Rise Mzansi","CAPE COLOURED CONGRESS":"CCC","NATIONAL COLOURED CONGRESS":"NCC"};
+const shortName = n => SHORTN[n] || n.replace(/\|/g, " ").split(/\s+/).filter(w => /^[A-Za-z]+$/.test(w) && !["OF","THE","AND","FOR"].includes(w)).map(w => w[0]).join("").slice(0, 6) || n.slice(0, 6);
+let lastCheck = null;
+async function apiOr(path, fallback){ try{ const r = await fetch(API + path, {cache:"no-store"}); if(r.ok){ const lc = r.headers.get("X-Last-Check"); if(lc) lastCheck = lc; const j = await r.json(); if(j) return j; } }catch(e){} return getJSON(fallback); }
+
 let latest = null, index = [], view = null, viewIdx = -1, map, munGeo, selMunic = null, wardCache = {};
 
 async function getJSON(u){ const r = await fetch(u + bust()); if(!r.ok) throw new Error(u + " " + r.status); return r.json(); }
@@ -16,7 +37,8 @@ async function getJSON(u){ const r = await fetch(u + bust()); if(!r.ok) throw ne
 async function load(manual){
   const btn = $("refresh"); btn.classList.add("spin");
   try{
-    const [l, idx] = await Promise.all([getJSON("data/latest.json"), getJSON("data/history/index.json").catch(()=>[])]);
+    if(manual) await fetch(API + "/refresh", {method:"POST"}).catch(() => {});   // ask the worker to check the IEC right now
+    const [l, idx] = await Promise.all([apiOr("/latest", "data/latest.json"), apiOr("/index", "data/history/index.json").catch(()=>[])]);
     const isNew = !latest || l.reportDate !== latest.reportDate;
     latest = l; index = idx;
     if(viewIdx === -1) show(-1);
@@ -31,7 +53,7 @@ function flash(msg){ const s = $("stamp"); s.dataset.msg = msg; stamp(); setTime
 
 function stamp(){
   if(!latest) return;
-  const s = $("stamp"), mins = Math.round((Date.now() - new Date(latest.fetchedAt)) / 60000);
+  const s = $("stamp"), mins = Math.round((Date.now() - new Date(lastCheck && new Date(lastCheck) > new Date(latest.fetchedAt) ? lastCheck : latest.fetchedAt)) / 60000);
   s.innerHTML = (s.dataset.msg ? `<b style="color:var(--gold)">${s.dataset.msg}</b><br>` : "") +
     `IEC report time: ${when(latest.reportDate)}<br>Last checked: ${mins < 1 ? "just now" : mins + " min ago"}`;
   const n = latest.national, done = n.vd >= n.vdTotal && n.vdTotal > 0;
@@ -49,7 +71,7 @@ function setupSlider(){
 
 async function show(i){
   viewIdx = i;
-  view = i === -1 ? latest : await getJSON("data/history/" + index[i].file);
+  view = i === -1 ? latest : await apiOr("/history/" + index[i].file, "data/history/" + index[i].file);
   if(i !== -1 && !view.munics) view.munics = {};
   const past = i !== -1;
   $("golive").hidden = !past;
@@ -130,14 +152,15 @@ function trend(){
   const lastParties = index[index.length - 1].parties;
   const parties = Object.keys(lastParties).filter(p => p !== "Other").slice(0, 6);
   const top = Math.ceil(Math.max(...index.flatMap(s => parties.map(p => s.parties[p] || 0))) / 10) * 10 || 40;
-  const x = v => P + v / 100 * (W - 2 * P), y = v => H - P - v / top * (H - 2 * P);
+  const lo = Math.max(0, Math.floor(Math.min(...index.map(s => s.vdPct)) / 5) * 5), hi = Math.min(100, Math.ceil(Math.max(...index.map(s => s.vdPct)) / 5) * 5 + 5);
+  const x = v => P + (v - lo) / (hi - lo) * (W - 2 * P - 30), y = v => H - P - v / top * (H - 2 * P);
   let g = "";
   for(let v = 0; v <= top; v += 10) g += `<line x1="${P}" x2="${W - P}" y1="${y(v)}" y2="${y(v)}" stroke="#2a3027"/><text x="2" y="${y(v) + 4}">${v}%</text>`;
-  [0, 25, 50, 75, 100].forEach(v => g += `<text x="${x(v)}" y="${H - 12}" text-anchor="middle">${v}%</text>`);
+  [lo, (lo + hi) / 2, hi].forEach(v => g += `<text x="${x(v)}" y="${H - 12}" text-anchor="middle">${Math.round(v)}%</text>`);
   g += `<text x="${W - P}" y="${H - 1}" text-anchor="end">share of districts counted →</text>`;
   parties.forEach(p => {
     const pts = index.filter(s => s.parties[p] != null).map(s => [x(s.vdPct), y(s.parties[p])]);
-    g += `<polyline fill="none" stroke="${col(p)}" stroke-width="2.4" points="${pts.join(" ")}"/>`;
+    g += `<polyline fill="none" stroke="${col(p)}" stroke-width="2.4" points="${pts.join(" ")}"/>` + pts.map(([a, b]) => `<circle cx="${a}" cy="${b}" r="2.5" fill="${col(p)}"/>`).join("");
     const [lx, ly] = pts[pts.length - 1]; g += `<text x="${lx + 4}" y="${ly + 4}" style="fill:${col(p)}">${p}</text>`;
   });
   if(viewIdx !== -1) g += `<line x1="${x(index[viewIdx].vdPct)}" x2="${x(index[viewIdx].vdPct)}" y1="${P / 2}" y2="${H - P}" stroke="#9ab4ff" stroke-dasharray="4 3"/>`;
@@ -211,7 +234,7 @@ async function openMunic(id, fly){
   if(fly) map.fitBounds(bbox(f.geometry), {padding:30, duration:900});
   nationalOrMunicPanel();
   try{
-    const [geo, res] = await Promise.all([wardCache["g" + id] || getJSON(`geo/wards/${id}.json`), wardCache[id] || getJSON(`data/wards/${id}.json`).catch(() => ({}))]);
+    const [geo, res] = await Promise.all([wardCache["g" + id] || getJSON(`geo/wards/${id}.json`), wardCache[id] || fetch(`${API}/wards/${id}`).then(r => r.json()).then(wardSummary).catch(() => getJSON(`data/wards/${id}.json`)).catch(() => ({}))]);
     wardCache["g" + id] = geo; wardCache[id] = res;
     if(selMunic !== String(id)) return;
     geo.features.forEach(w => {

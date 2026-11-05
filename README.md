@@ -8,8 +8,9 @@ It shows national, provincial, municipal and ward results on a clickable map.
 ## Where the numbers come from
 
 The Electoral Commission (IEC) publishes the files behind its own results dashboard at
-`results.elections.org.za/dashboards/lge/MapsJason/2026/` (the IEC's spelling). A GitHub Action
-(`.github/workflows/update.yml`) runs `scripts/update.py` about every ten minutes. It fetches the national
+`results.elections.org.za/dashboards/lge/MapsJason/2026/` (the IEC's spelling). A Cloudflare Worker (`worker/`) checks the national file every five minutes and whenever a visitor presses
+Refresh (at most once a minute), and serves the results to the page. The GitHub Action
+(`.github/workflows/update.yml`) runs `scripts/update.py` as a static fallback. It fetches the national
 file, refetches ward results only for municipalities whose report time has changed, and commits
 compact JSON to `data/`. Each new IEC report is also kept in `data/history/`, which drives the
 page's time slider and trend chart.
@@ -29,4 +30,4 @@ simplified with mapshaper to keep file sizes down. Ward shapes load per municipa
 
 No build step. The map uses MapLibre GL with OpenFreeMap tiles.
 
-This is an independent project, not affiliated with the IEC.
+Not affiliated with the IEC.

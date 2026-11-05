@@ -1,0 +1,10 @@
+name = "lge2026"
+main = "worker.js"
+compatibility_date = "2026-11-01"
+
+[triggers]
+crons = ["*/5 * * * *"]
+
+[[kv_namespaces]]
+binding = "LGE"
+id = "2e6c4c0b13904b98a775b35cade77d6d"
