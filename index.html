@@ -16,7 +16,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,800&family=JetBrains+Mono:wght@400;600&family=Inter:wght@400;600&display=swap" rel="stylesheet">
 <link href="https://unpkg.com/maplibre-gl@5/dist/maplibre-gl.css" rel="stylesheet">
-<link href="assets/style.css?v=6" rel="stylesheet">
+<link href="assets/style.css?v=7" rel="stylesheet">
 </head>
 <body>
 <header class="top">
@@ -83,6 +83,11 @@
   <section class="card s6"><h2>Councils · won outright and seats so far</h2><div id="councils"></div></section>
 
   <section class="card s12"><h2>Provinces</h2><div class="provs" id="provs"></div></section>
+
+  <section class="card s12 stellies" id="stellies">
+    <h2>Stellenbosch · ward by ward</h2>
+    <div id="stelliesBody"><p class="note">Loading Stellenbosch…</p></div>
+  </section>
 </main>
 
 <footer>
@@ -92,6 +97,6 @@
 </footer>
 
 <script src="https://unpkg.com/maplibre-gl@5/dist/maplibre-gl.js"></script>
-<script src="assets/app.js?v=6"></script>
+<script src="assets/app.js?v=7"></script>
 </body>
 </html>

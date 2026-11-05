@@ -43,6 +43,7 @@ async function load(manual){
     latest = l; index = idx;
     if(viewIdx === -1) show(-1);
     setupSlider();
+    if(isNew || !$("stelliesBody").dataset.done){ $("stelliesBody").dataset.done = 1; stellies(); }
     if(isNew && selMunic) { delete wardCache[selMunic]; openMunic(selMunic, false); }
     if(manual) flash(isNew ? "New results loaded" : "Already up to date");
   }catch(e){ flash("Couldn't reach the results file. Try again shortly."); console.error(e); }
@@ -283,6 +284,38 @@ function nationalPanel(){
   $("panel").innerHTML = `<h3>South Africa</h3><small>213 councils · ${fmt(latest.national.registered)} registered voters</small>
     <p class="note" style="margin-top:12px">Click any municipality, or use the search box on the map, to zoom in and see every ward.</p>
     <p class="note">Metro cards below also jump straight to the city.</p>`;
+}
+
+/* ---------------- Stellenbosch ---------------- */
+const STELLIES = "9911";
+async function stellies(){
+  try{
+    const d = await fetch(`${API}/wards/${STELLIES}`).then(r => r.json());
+    const wards = (d.WardResults || []).map(w => {
+      const tot = w.PartyBallotResults.reduce((t, p) => t + p.WardVotes, 0);
+      const da = (w.PartyBallotResults.find(p => p.Name === "DEMOCRATIC ALLIANCE") || {}).WardVotes || 0;
+      const top = w.PartyBallotResults.slice().sort((a, b) => b.WardVotes - a.WardVotes)[0];
+      const vds = w.VotingDistrictResults || [];
+      return {no: w.WardID % 1000, tot, da, pct: tot ? 100 * da / tot : 0, lead: top && top.WardVotes ? shortName(top.Name) : null,
+        vd: vds.filter(v => (v.PartyBallotResults || []).some(p => p.TotalValidVotes)).length, vdTotal: vds.length};
+    }).sort((a, b) => b.pct - a.pct);
+    const counted = wards.filter(w => w.tot), daWins = counted.filter(w => w.lead === "DA"), best = counted[0];
+    const m = latest.munics[STELLIES];
+    const daPct = m && m.parties[0] ? (m.parties.find(p => p[0] === "DA") || [0, 0])[1] : 0;
+    $("stelliesBody").innerHTML = `
+      <div class="st-head">
+        <div><div class="st-big" style="color:${col("DA")}">${daPct.toFixed(1)}%</div><small>DA across Stellenbosch · ${m ? m.vdPct.toFixed(0) : 0}% of districts counted</small></div>
+        <div class="st-score"><b>${daWins.length}</b> of ${wards.length} wards blue so far</div>
+      </div>
+      ${best ? `<div class="thanks"><span>Thank you, Ward ${best.no}</span><small>The most DA ward in Stellenbosch so far: ${best.pct.toFixed(1)}% of the ward vote.</small></div>` : ""}
+      <div class="st-wards">${wards.map(w => `<button class="st-ward" data-no="${w.no}" title="Show on the map">
+        <span class="mono">Ward ${w.no}</span>
+        <div class="track"><div style="width:${w.pct}%;background:${col("DA")}"></div></div>
+        <span class="mono">${w.tot ? w.pct.toFixed(1) + "%" : "—"}</span>
+        <small>${w.tot ? (w.lead === "DA" ? "DA ahead" : w.lead + " ahead") + ` · ${w.vd}/${w.vdTotal} counted` : "not counted yet"}</small></button>`).join("")}</div>
+      ${daWins.length ? `<p class="thanks-all">💙 Thank you to every ward voting blue: ${daWins.map(w => "Ward " + w.no).join(", ")}.</p>` : ""}`;
+    document.querySelectorAll(".st-ward").forEach(b => b.onclick = () => { openMunic(STELLIES, true); $("map").scrollIntoView({behavior:"smooth", block:"center"}); });
+  }catch(e){ $("stelliesBody").innerHTML = `<p class="note">Couldn't load Stellenbosch's wards right now.</p>`; }
 }
 
 $("refresh").onclick = () => load(true);

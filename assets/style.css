@@ -132,3 +132,16 @@ footer{margin-top:30px;color:var(--mute);font-size:12px;max-width:760px}
   .ring svg{width:100px;height:100px}
   footer{padding:0 14px}
 }
+
+/* Stellenbosch */
+.st-head{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap}
+.st-big{font:800 64px/1 Fraunces,serif}
+.st-score{font:600 15px Inter;color:var(--mute)}.st-score b{font:800 34px Fraunces,serif;color:var(--ink);margin-right:4px}
+.thanks{margin:18px 0;padding:16px 18px;border-left:4px solid #2f6fdf;background:#2f6fdf14}
+.thanks span{display:block;font:800 28px Fraunces,serif}
+.st-wards{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:4px 24px}
+.st-ward{all:unset;cursor:pointer;display:grid;grid-template-columns:72px 1fr 56px;gap:4px 10px;align-items:center;padding:6px 4px;border-bottom:1px solid var(--line)}
+.st-ward:hover{background:#ffffff08}
+.st-ward .track{height:10px}
+.st-ward small{grid-column:1/-1;font-size:11px}
+.thanks-all{margin-top:16px;color:var(--ink);font-size:14px;line-height:1.6}
