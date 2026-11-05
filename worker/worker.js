@@ -97,6 +97,34 @@ async function check(env, source) {
 const json = (body, extra = {}) => new Response(typeof body === "string" ? body : JSON.stringify(body),
   { headers: { "Content-Type": "application/json", ...CORS, ...extra } });
 
+// Visit counter: one Durable Object holds totals in SQLite. Visitors are identified only by a
+// salted hash of IP + browser + date, so nothing personal is stored and it resets daily.
+import { DurableObject } from "cloudflare:workers";
+export class Counter extends DurableObject {
+  constructor(ctx, env) {
+    super(ctx, env);
+    this.sql = ctx.storage.sql;
+    this.sql.exec("CREATE TABLE IF NOT EXISTS days (day TEXT PRIMARY KEY, views INTEGER, uniques INTEGER)");
+    this.sql.exec("CREATE TABLE IF NOT EXISTS seen (day TEXT, h TEXT, PRIMARY KEY (day, h))");
+  }
+  hit(day, h) {
+    const fresh = this.sql.exec("INSERT OR IGNORE INTO seen (day, h) VALUES (?, ?)", day, h).rowsWritten > 0;
+    this.sql.exec(`INSERT INTO days (day, views, uniques) VALUES (?, 1, ?)
+      ON CONFLICT(day) DO UPDATE SET views = views + 1, uniques = uniques + ?`, day, fresh ? 1 : 0, fresh ? 1 : 0);
+    this.sql.exec("DELETE FROM seen WHERE day < ?", day);   // only today's hashes are kept
+  }
+  stats() {
+    const days = this.sql.exec("SELECT day, views, uniques FROM days ORDER BY day").toArray();
+    return { days, totalViews: days.reduce((t, d) => t + d.views, 0) };
+  }
+}
+
+async function visitorHash(req, day) {
+  const raw = `${req.headers.get("CF-Connecting-IP")}|${req.headers.get("User-Agent")}|${day}|lge2026`;
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(raw));
+  return [...new Uint8Array(buf).slice(0, 12)].map(b => b.toString(16).padStart(2, "0")).join("");
+}
+
 export default {
   async scheduled(_, env, ctx) { ctx.waitUntil(check(env, "schedule")); },
 
@@ -117,6 +145,13 @@ export default {
     }
     let m = p.match(/^\/api\/history\/(\d{8}T\d{6}\.json)$/);
     if (m) { const v = await env.LGE.get("h:" + m[1]); return v ? json(v, { "Cache-Control": "public, max-age=86400" }) : json({ error: "not found" }); }
+    if (p === "/api/hit" && req.method === "POST") {
+      const day = new Date(Date.now() + 2 * 3600e3).toISOString().slice(0, 10);   // SAST date
+      const stub = env.COUNTER.get(env.COUNTER.idFromName("site"));
+      ctx.waitUntil(visitorHash(req, day).then(h => stub.hit(day, h)));
+      return new Response(null, { status: 204, headers: CORS });
+    }
+    if (p === "/api/stats") return json(await env.COUNTER.get(env.COUNTER.idFromName("site")).stats(), { "Cache-Control": "no-store" });
     if (p === "/api/refresh" && req.method === "POST") {
       const gate = new Request("https://lge2026.internal/refresh-gate"), cache = caches.default;
       if (await cache.match(gate)) return json({ checked: false, reason: "checked under a minute ago" });

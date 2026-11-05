@@ -404,3 +404,6 @@ setInterval(() => { if(viewIdx === -1) load(false); else stamp(); }, 180000);
 addEventListener("resize", trend);
 document.addEventListener("visibilitychange", () => { if(!document.hidden && viewIdx === -1) load(false); });
 load(false).then(initMap);
+
+// count this visit (no cookies; see worker /api/hit)
+try{ navigator.sendBeacon(API + "/hit"); }catch(e){}

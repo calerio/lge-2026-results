@@ -1,0 +1,30 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex"><title>Visits · LGE 2026</title>
+<style>
+@font-face{font-family:Bowlby;src:url(assets/fonts/BowlbyOne-Regular.ttf)}
+body{margin:0;background:#f6f1e6;color:#16181d;font:16px/1.4 Inter,system-ui,sans-serif}
+header{background:#104bb4;padding:22px 20px}
+h1{margin:0;font:400 34px Bowlby,sans-serif;color:#f7a11f;text-shadow:3px 3px 0 #cf2027}
+main{max-width:640px;margin:0 auto;padding:20px}
+.big{display:flex;gap:28px;flex-wrap:wrap;margin:8px 0 24px}
+.big b{display:block;font:400 54px Bowlby,sans-serif;line-height:1}
+.big span{color:#55585f;font-size:14px}
+table{width:100%;border-collapse:collapse;background:#fff}
+td,th{padding:10px 12px;border-bottom:1px solid #e6dfcf;text-align:right;font-variant-numeric:tabular-nums}
+td:first-child,th:first-child{text-align:left}
+button{margin-top:16px;height:44px;padding:0 18px;border:0;background:#f7a11f;font:700 15px Inter,sans-serif;box-shadow:3px 3px 0 #cf2027;cursor:pointer}
+</style></head><body>
+<header><h1>Visits</h1></header>
+<main><div class="big" id="big"></div><table><thead><tr><th>Day</th><th>Visitors</th><th>Page views</th></tr></thead><tbody id="rows"></tbody></table>
+<button onclick="load()">Refresh</button></main>
+<script>
+async function load(){
+  const d = await fetch("https://lge2026.nologna.workers.dev/api/stats", {cache:"no-store"}).then(r => r.json());
+  const today = d.days[d.days.length - 1] || {views: 0, uniques: 0};
+  document.getElementById("big").innerHTML = `<div><b>${today.uniques.toLocaleString("en-ZA")}</b><span>visitors today</span></div>
+    <div><b>${today.views.toLocaleString("en-ZA")}</b><span>page views today</span></div>
+    <div><b>${d.totalViews.toLocaleString("en-ZA")}</b><span>page views in total</span></div>`;
+  document.getElementById("rows").innerHTML = d.days.slice().reverse().map(x => `<tr><td>${x.day}</td><td>${x.uniques.toLocaleString("en-ZA")}</td><td>${x.views.toLocaleString("en-ZA")}</td></tr>`).join("");
+}
+load(); setInterval(load, 30000);
+</script></body></html>

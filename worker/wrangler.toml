@@ -8,3 +8,11 @@ crons = ["*/5 * * * *"]
 [[kv_namespaces]]
 binding = "LGE"
 id = "2e6c4c0b13904b98a775b35cade77d6d"
+
+[[durable_objects.bindings]]
+name = "COUNTER"
+class_name = "Counter"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Counter"]
