@@ -95,7 +95,7 @@ function evaluation(b){
   return orders.map(o => `<h4 class="bt-h4">${o === "mixed" ? "Typical counting order" : "Worst-case order (most pro-DA areas first)"}</h4>
     <div class="pr-tablewrap"><table class="bt"><thead><tr><th>Districts counted</th><th>Projections published</th><th>Real result inside range</th><th>Typical miss <small>(vs count-so-far)</small></th></tr></thead><tbody>
     ${stages.map(s => `<tr><td>${s}%</td>${cell(b.byStage[o + "|" + s])}</tr>`).join("")}</tbody></table></div>`).join("") +
-    `<p class="note">Misses are in percentage points of vote share, for the DA, ANC and EFF across the eight metros. "Count-so-far" treats the count at that stage as the final result.</p>`;
+    `<p class="note">Misses are in percentage points of vote share, for the DA, ANC and EFF across the eight metros. "Count-so-far" treats the count at that stage as the final result. Every published range contained the real result, more often than the 90% the ranges aim for, so they are on the cautious side. Withheld means the safety rule held the projection back.</p>`;
 }
 
 async function load(){
