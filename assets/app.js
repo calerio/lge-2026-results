@@ -33,7 +33,7 @@ const SHORTN = {"AFRICAN NATIONAL CONGRESS":"ANC","DEMOCRATIC ALLIANCE":"DA","UM
   "GOOD":"GOOD","AL JAMA-AH":"Al Jama-ah","BUILD ONE SOUTH AFRICA":"BOSA","RISE MZANSI":"Rise Mzansi","CAPE COLOURED CONGRESS":"CCC","NATIONAL COLOURED CONGRESS":"NCC"};
 const shortName = n => SHORTN[n] || n.replace(/\|/g, " ").split(/\s+/).filter(w => /^[A-Za-z]+$/.test(w) && !["OF","THE","AND","FOR"].includes(w)).map(w => w[0]).join("").slice(0, 6) || n.slice(0, 6);
 let lastCheck = null;
-async function apiOr(path, fallback){ try{ const r = await fetch(API + path, {cache:"no-store"}); if(r.ok){ const lc = r.headers.get("X-Last-Check"); if(lc) lastCheck = lc; const j = await r.json(); if(j) return j; } }catch(e){} return getJSON(fallback); }
+async function apiOr(path, fallback){ try{ const r = await fetch(API + path, {cache:"no-store"}); if(r.ok){ const lc = r.headers.get("X-Last-Check"); if(lc && (!lastCheck || new Date(lc) > new Date(lastCheck))) lastCheck = lc; const j = await r.json(); if(j) return j; } }catch(e){} return getJSON(fallback); }
 
 // Ward results for one municipality. Prefer the small summaries on GitHub (a few KB, made by
 // scripts/update.py); fall back to the IEC's full file through the worker when those are behind.
@@ -58,7 +58,10 @@ function load(manual){
 async function loadOnce(manual){
   const btn = $("refresh"); btn.setAttribute("aria-busy","true"); if(manual) $("refreshLabel").textContent = "Refreshing…";
   try{
-    if(manual) await fetch(API + "/refresh", {method:"POST"}).catch(() => {});   // ask the worker to check the IEC right now
+    if(manual){   // ask the worker to check the IEC right now; either way the IEC was just checked
+      const r = await fetch(API + "/refresh", {method:"POST"}).then(r => r.json()).catch(() => null);
+      if(r) lastCheck = new Date().toISOString();
+    }
     const fresh = manual ? "?fresh=1" : "";
     const l = await apiOr("/latest" + fresh, "data/latest.json");
     // the history index only changes when a new count arrives, so skip it otherwise
@@ -81,7 +84,7 @@ function stamp(){
   if(!latest) return;
   const s = $("stamp"), mins = Math.round((Date.now() - new Date(lastCheck && new Date(lastCheck) > new Date(latest.fetchedAt) ? lastCheck : latest.fetchedAt)) / 60000);
   const t = hm(latest.reportDate), ago = mins < 1 ? "just now" : mins + " min ago";
-  s.innerHTML = s.dataset.msg ? `<b>${s.dataset.msg}</b>` : `<span class="long">IEC report <b>${t}</b> · checked ${ago}</span><span class="short"><b>${t}</b> · ${ago}</span>`;
+  s.innerHTML = s.dataset.msg ? `<b>${s.dataset.msg}</b>` : `<span class="long">IEC report <b>${t}</b> · checked ${ago}</span><span class="short">IEC <b>${t}</b> · checked ${ago}</span>`;
   const n = latest.national, done = n.vd >= n.vdTotal && n.vdTotal > 0;
   const st = $("stale");
   if(mins > 45 && !done){ st.hidden = false; st.textContent = `The automatic update last ran ${mins} minutes ago, so these figures may be out of date. The IEC's own site is at results.elections.org.za.`; }
