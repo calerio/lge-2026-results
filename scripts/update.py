@@ -93,7 +93,9 @@ def ward_summary(mid):
         vds = w.get("VotingDistrictResults", [])
         counted = sum(1 for v in vds if any(p.get("TotalValidVotes", 0) for p in v.get("PartyBallotResults", [])))
         top = [[n, round(100 * v / total, 1), v] for v, n in votes[:3] if v] if total else []
-        out[str(w["WardID"])] = {"top": top, "votes": total, "vd": counted, "vdTotal": len(vds)}
+        da = next((v for v, n in votes if n == "DA"), 0)
+        out[str(w["WardID"])] = {"top": top, "votes": total, "vd": counted, "vdTotal": len(vds),
+                                 "da": round(100 * da / total, 1) if total else 0}
     return out
 
 def write(path, obj):

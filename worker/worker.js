@@ -42,6 +42,20 @@ function summarise(nat) {
   return s;
 }
 
+// The national file lists only the leader for most municipalities; the province files list the top three.
+async function provinceParties(provIds) {
+  const out = {};
+  await Promise.all(provIds.map(async id => {
+    try {
+      const r = await fetch(`${BASE}${EEID}Province${id}.js?rnd=${Date.now()}`, { headers: UA, cf: { cacheTtl: 0 } });
+      if (!r.ok) return;
+      const d = JSON.parse((await r.text()).replace(/^\uFEFF/, ""));
+      for (const m of d.MunicipalityResults || []) out[m.MunicipalityID] = parties(m.PartyBallotResults || []);
+    } catch (e) {}
+  }));
+  return out;
+}
+
 async function check(env, source) {
   const r = await fetch(`${BASE}${EEID}LiteMapsNational.js?rnd=${Date.now()}`, { headers: UA, cf: { cacheTtl: 0 } });
   if (!r.ok) throw new Error("IEC " + r.status);
@@ -49,16 +63,34 @@ async function check(env, source) {
   // KV free tier = 1000 writes/day. Budget: check time every 15 min (96) + 3 writes per new IEC count.
   if (source === "schedule" && new Date().getMinutes() % 15 < 5) await env.LGE.put("lastCheck", String(Date.now()));
   const idx = JSON.parse(await env.LGE.get("index") || "[]");
-  if (idx.length && idx[idx.length - 1].reportDate === nat.ReportDate) return { changed: false, reportDate: nat.ReportDate };
+  const prev = JSON.parse(await env.LGE.get("latest") || "null");
+  const indexed = idx.some(i => i.reportDate === nat.ReportDate);
+  if (prev && prev.reportDate === nat.ReportDate && (source !== "schedule" || indexed)) return { changed: false, reportDate: nat.ReportDate };
   const s = summarise(nat);
+  const extra = await provinceParties(nat.ProvinceResults.map(p => p.ProvinceID));
+  for (const [id, ps] of Object.entries(extra)) if (s.munics[id] && ps.length > s.munics[id].parties.length)
+    s.munics[id].parties = ps.filter(p => p.short !== "Other").slice(0, 4).map(p => [p.short, p.pct, p.seats]);
   const stamp = s.reportDate.slice(0, 19).replace(/[-:]/g, "");
   const hist = { ...s, munics: Object.fromEntries(Object.entries(s.munics).map(([k, m]) =>
     [k, [m.parties[0]?.[0] ?? null, m.parties[0]?.[1] ?? 0, m.vdPct]])) };
-  if (!idx.some(i => i.reportDate === s.reportDate)) idx.push({ file: `${stamp}.json`, reportDate: s.reportDate,
+  if (source === "schedule" && !idx.some(i => i.reportDate === s.reportDate)) idx.push({ file: `${stamp}.json`, reportDate: s.reportDate,
     vdPct: Math.round(1000 * s.national.vd / Math.max(s.national.vdTotal, 1)) / 10,
     parties: Object.fromEntries(s.national.parties.slice(0, 8).map(p => [p.short, p.pct])), via: source });
-  await Promise.all([env.LGE.put("latest", JSON.stringify(s)), env.LGE.put(`h:${stamp}.json`, JSON.stringify(hist)),
-    env.LGE.put("index", JSON.stringify(idx))]);
+  const writes = [env.LGE.put("latest", JSON.stringify(s)), env.LGE.put(`h:${stamp}.json`, JSON.stringify(hist))];
+  if (source === "schedule") {
+    // fold in counts a visitor refresh stored since the last run (they write only latest + h:<stamp>)
+    const listed = await env.LGE.list({ prefix: "h:" });
+    for (const k of listed.keys) {
+      const file = k.name.slice(2);
+      if (file === `${stamp}.json` || idx.some(i => i.file === file)) continue;
+      const h = JSON.parse(await env.LGE.get(k.name) || "null"); if (!h) continue;
+      idx.push({ file, reportDate: h.reportDate, vdPct: Math.round(1000 * h.national.vd / Math.max(h.national.vdTotal, 1)) / 10,
+        parties: Object.fromEntries(h.national.parties.slice(0, 8).map(p => [p.short, p.pct])), via: "visitor" });
+    }
+    idx.sort((a, b) => a.reportDate.localeCompare(b.reportDate));
+    writes.push(env.LGE.put("index", JSON.stringify(idx)));
+  }
+  await Promise.all(writes);
   return { changed: true, reportDate: s.reportDate };
 }
 

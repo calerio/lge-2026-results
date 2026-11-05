@@ -22,7 +22,8 @@ function wardSummary(d){
     const total = votes.reduce((t, v) => t + v[0], 0);
     const vds = w.VotingDistrictResults || [];
     const vd = vds.filter(v => (v.PartyBallotResults || []).some(p => p.TotalValidVotes)).length;
-    out[w.WardID] = {top: total ? votes.slice(0, 3).filter(v => v[0]).map(([v, n]) => [n, Math.round(1000 * v / total) / 10, v]) : [], votes: total, vd, vdTotal: vds.length};
+    const da = (votes.find(v => v[1] === "DA") || [0])[0];
+    out[w.WardID] = {top: total ? votes.slice(0, 3).filter(v => v[0]).map(([v, n]) => [n, Math.round(1000 * v / total) / 10, v]) : [], votes: total, vd, vdTotal: vds.length, da: total ? Math.round(1000 * da / total) / 10 : 0};
   }
   return out;
 }
@@ -34,11 +35,27 @@ const shortName = n => SHORTN[n] || n.replace(/\|/g, " ").split(/\s+/).filter(w 
 let lastCheck = null;
 async function apiOr(path, fallback){ try{ const r = await fetch(API + path, {cache:"no-store"}); if(r.ok){ const lc = r.headers.get("X-Last-Check"); if(lc) lastCheck = lc; const j = await r.json(); if(j) return j; } }catch(e){} return getJSON(fallback); }
 
+// Ward results for one municipality. Prefer the small summaries on GitHub (a few KB, made by
+// scripts/update.py); fall back to the IEC's full file through the worker when those are behind.
+let ghReport = null, ghChecked = 0;
+async function wardsFor(id){
+  if(Date.now() - ghChecked > 120000){ ghChecked = Date.now(); ghReport = getJSON("data/latest.json").then(d => d.reportDate).catch(() => null); }
+  const ghDate = await ghReport;                  // shared promise, so parallel callers wait for one check
+  const behind = !ghDate || !latest || (new Date(latest.reportDate) - new Date(ghDate)) > 20 * 60000;
+  if(!behind){ try{ return await getJSON(`data/wards/${id}.json`); }catch(e){} }
+  return fetch(`${API}/wards/${id}`).then(r => r.json()).then(wardSummary);
+}
+
 let latest = null, index = [], view = null, viewIdx = -1, map, munGeo, selMunic = null, wardCache = {};
 
 async function getJSON(u){ const r = await fetch(u + bust()); if(!r.ok) throw new Error(u + " " + r.status); return r.json(); }
 
-async function load(manual){
+let loading = null;
+function load(manual){
+  if(loading && !manual) return loading;          // a timer and a tab refocus can fire together
+  return loading = loadOnce(manual).finally(() => { loading = null; });
+}
+async function loadOnce(manual){
   const btn = $("refresh"); btn.setAttribute("aria-busy","true"); if(manual) $("refreshLabel").textContent = "Refreshing…";
   try{
     if(manual) await fetch(API + "/refresh", {method:"POST"}).catch(() => {});   // ask the worker to check the IEC right now
@@ -78,9 +95,15 @@ function setupSlider(){
   $("golive").onclick = () => { sl.value = sl.max; show(-1); };
 }
 
+let showToken = 0;
 async function show(i){
+  const t = ++showToken;
   viewIdx = i;
-  view = i === -1 ? latest : await apiOr("/history/" + index[i].file, "data/history/" + index[i].file);
+  let v;
+  try{ v = i === -1 ? latest : await apiOr("/history/" + index[i].file, "data/history/" + index[i].file); }
+  catch(e){ return; }
+  if(t !== showToken) return;                     // a newer slider position won
+  view = v;
   if(i !== -1 && !view.munics) view.munics = {};
   const past = i !== -1;
   $("golive").hidden = !past;
@@ -104,7 +127,7 @@ function munLeader(id){
 function render(s, prevI){
   const n = s.national, parties = n.parties.filter(p => p.pct > 0);
   const prev = prevI >= 0 && index[prevI] ? index[prevI].parties : null;
-  const [a, b] = parties;
+  const [a = {short: "–", pct: 0, votes: 0}, b = {short: "–", pct: 0, votes: 0}] = parties;
   $("duel").innerHTML = `<div><div class="lab" style="color:${col(a.short)}">${a.short} ahead</div><div class="big" style="color:${col(a.short)}">${a.pct.toFixed(1)}%</div><small>${fmt(a.votes)} votes</small></div>
     <div class="gap"><b>${(a.pct - b.pct).toFixed(2)}</b><small>pts gap</small></div>
     <div class="r"><div class="lab" style="color:${col(b.short)}">${b.short}</div><div class="big" style="color:${col(b.short)}">${b.pct.toFixed(1)}%</div><small>${fmt(b.votes)} votes</small></div>`;
@@ -175,11 +198,20 @@ function trend(){
 }
 
 /* ---------------- map ---------------- */
+const SA = [[16.3, -35], [33, -22]];
 function initMap(){
   map = new maplibregl.Map({container:"map", style:"https://tiles.openfreemap.org/styles/positron",
-    bounds:[[16.3, -35], [33, -22]], fitBoundsOptions:{padding:20}, attributionControl:{compact:true}});
+    bounds:SA, fitBoundsOptions:{padding:20}, maxBounds:[[8, -42], [42, -15]], minZoom:3,
+    dragRotate:false, attributionControl:{compact:true}});
+  map.touchZoomRotate.disableRotation();
   map.addControl(new maplibregl.NavigationControl({showCompass:false}), "top-right");
+  map.addControl({onAdd(){
+    const d = document.createElement("div"); d.className = "maplibregl-ctrl maplibregl-ctrl-group";
+    d.innerHTML = '<button type="button" class="recentre" title="Back to South Africa" aria-label="Back to South Africa"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2" fill="currentColor"/><path d="M12 1v4M12 19v4M1 12h4M19 12h4"/></svg></button>';
+    d.firstChild.onclick = () => selMunic ? closeMunic() : map.fitBounds(SA, {padding:20, duration:900});
+    return d; }, onRemove(){}}, "top-right");
   map.on("load", async () => {
+    document.querySelector(".maplibregl-ctrl-attrib")?.classList.remove("maplibregl-compact-show");  // start folded
     munGeo = await getJSON("geo/munics.json");
     munGeo.features.forEach(f => f.id = f.properties.MunicId);
     map.addSource("mun", {type:"geojson", data:munGeo});
@@ -241,7 +273,7 @@ async function openMunic(id, fly){
   if(fly) map.fitBounds(bbox(f.geometry), {padding:30, duration:900});
   nationalOrMunicPanel();
   try{
-    const [geo, res] = await Promise.all([wardCache["g" + id] || getJSON(`geo/wards/${id}.json`), wardCache[id] || fetch(`${API}/wards/${id}`).then(r => r.json()).then(wardSummary).catch(() => getJSON(`data/wards/${id}.json`)).catch(() => ({}))]);
+    const [geo, res] = await Promise.all([wardCache["g" + id] || getJSON(`geo/wards/${id}.json`), wardCache[id] || wardsFor(id).catch(() => ({}))]);
     wardCache["g" + id] = geo; wardCache[id] = res;
     if(selMunic !== String(id)) return;
     geo.features.forEach(w => {
@@ -258,7 +290,7 @@ function closeMunic(){
   map.getSource("ward").setData({type:"FeatureCollection", features:[]});
   map.setFilter("mun-sel", ["==", ["id"], -1]);
   map.setPaintProperty("mun-fill", "fill-opacity", ["coalesce", ["feature-state", "o"], .6]);
-  map.fitBounds([[16.3, -35], [33, -22]], {padding:20, duration:900});
+  map.fitBounds(SA, {padding:20, duration:900});
   nationalPanel();
 }
 
@@ -313,18 +345,12 @@ const JHB = "3003";
 async function jhb(){
   const m = latest.munics[JHB];
   if(!m){ $("jhbBody").innerHTML = `<p class="note">No Johannesburg results yet.</p>`; return; }
-  let blue = 0, wardsTotal = 0, wardsCounted = 0, tally = {}, all = 0;
+  let blue = 0, wardsTotal = 0;
   try{
-    const d = await fetch(`${API}/wards/${JHB}`).then(r => r.json());
-    for(const w of d.WardResults || []){
-      wardsTotal++;
-      for(const p of w.PartyBallotResults){ const k = shortName(p.Name), v = p.TotalValidVotes || 0; tally[k] = (tally[k] || 0) + v; all += v; }
-      const top = w.PartyBallotResults.slice().sort((a, b) => b.WardVotes - a.WardVotes)[0];
-      if(top && top.WardVotes){ wardsCounted++; if(top.Name === "DEMOCRATIC ALLIANCE") blue++; }
-    }
+    const w = await wardsFor(JHB);
+    for(const r of Object.values(w)){ wardsTotal++; if(r.top[0] && r.top[0][0] === "DA") blue++; }
   }catch(e){}
-  // Party shares across all ballots, summed from the ward file (the summary only lists the leader).
-  const ps = all ? Object.entries(tally).map(([k, v]) => [k, 100 * v / all]).filter(p => p[1] >= 1).sort((a, b) => b[1] - a[1]).slice(0, 6) : m.parties, da = ps.find(p => p[0] === "DA") || ["DA", 0, 0], rivals = ps.filter(p => p[0] !== "DA");
+  const ps = m.parties, da = ps.find(p => p[0] === "DA") || ["DA", 0, 0], rivals = ps.filter(p => p[0] !== "DA");
   const max = Math.max(55, ...ps.map(p => p[1]));
   const toMaj = Math.max(0, 50 - da[1]);
   $("jhbBody").innerHTML = `
@@ -346,15 +372,9 @@ async function jhb(){
 
 async function stellies(){
   try{
-    const d = await fetch(`${API}/wards/${STELLIES}`).then(r => r.json());
-    const wards = (d.WardResults || []).map(w => {
-      const tot = w.PartyBallotResults.reduce((t, p) => t + p.WardVotes, 0);
-      const da = (w.PartyBallotResults.find(p => p.Name === "DEMOCRATIC ALLIANCE") || {}).WardVotes || 0;
-      const top = w.PartyBallotResults.slice().sort((a, b) => b.WardVotes - a.WardVotes)[0];
-      const vds = w.VotingDistrictResults || [];
-      return {no: w.WardID % 1000, tot, da, pct: tot ? 100 * da / tot : 0, lead: top && top.WardVotes ? shortName(top.Name) : null,
-        vd: vds.filter(v => (v.PartyBallotResults || []).some(p => p.TotalValidVotes)).length, vdTotal: vds.length};
-    }).sort((a, b) => b.pct - a.pct);
+    const sum = await wardsFor(STELLIES);
+    const wards = Object.entries(sum).map(([id, r]) => ({no: +id % 1000, tot: r.votes, pct: r.da ?? ((r.top.find(t => t[0] === "DA") || [0, 0])[1]),
+      lead: r.top[0] ? r.top[0][0] : null, vd: r.vd, vdTotal: r.vdTotal})).sort((a, b) => b.pct - a.pct);
     const counted = wards.filter(w => w.tot), daWins = counted.filter(w => w.lead === "DA"), best = counted[0];
     const m = latest.munics[STELLIES];
     const daPct = m && m.parties[0] ? (m.parties.find(p => p[0] === "DA") || [0, 0])[1] : 0;
@@ -377,7 +397,7 @@ async function stellies(){
 }
 
 $("refresh").onclick = () => load(true);
-setInterval(() => { if(viewIdx === -1) load(false); else stamp(); }, 120000);
+setInterval(() => { if(viewIdx === -1) load(false); else stamp(); }, 180000);
 addEventListener("resize", trend);
 document.addEventListener("visibilitychange", () => { if(!document.hidden && viewIdx === -1) load(false); });
 load(false).then(initMap);
