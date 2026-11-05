@@ -201,13 +201,10 @@ function trend(){
   for(let v = 0; v <= top; v += 10) g += `<line x1="${P}" x2="${W - P}" y1="${y(v)}" y2="${y(v)}" stroke="#ddd5c4"/><text x="2" y="${y(v) + 4}">${v}%</text>`;
   [lo, (lo + hi) / 2, hi].forEach(v => g += `<text x="${x(v)}" y="${H - 12}" text-anchor="middle">${Math.round(v)}%</text>`);
   g += `<text x="${W - P}" y="${H - 1}" text-anchor="end">share of districts counted →</text>`;
-  if(PAST) g += `<text x="${W - P - 9}" y="${P / 2}" text-anchor="middle">2021</text>`;
   parties.forEach(p => {
     const pts = index.filter(s => s.parties[p] != null).map(s => [x(s.vdPct), y(s.parties[p])]);
     g += `<polyline fill="none" stroke="${col(p)}" stroke-width="2.5" points="${pts.join(" ")}"/>` + pts.map(([a, b]) => `<circle cx="${a}" cy="${b}" r="2.5" fill="${col(p)}"/>`).join("");
     const [lx, ly] = pts[pts.length - 1]; g += `<text x="${lx + 4}" y="${ly + 4}" style="fill:${col(p)};font-weight:700">${p}</text>`;
-    const was = past("2021", null, p);
-    if(was != null) g += `<line x1="${W - P - 22}" x2="${W - P + 4}" y1="${y(was)}" y2="${y(was)}" stroke="${col(p)}" stroke-width="3" stroke-dasharray="3 2"><title>${p} 2021: ${was}%</title></line>`;
   });
   if(viewIdx !== -1) g += `<line x1="${x(index[viewIdx].vdPct)}" x2="${x(index[viewIdx].vdPct)}" y1="${P / 2}" y2="${H - P}" stroke="#0b357f" stroke-dasharray="4 3"/>`;
   svg.innerHTML = g;
