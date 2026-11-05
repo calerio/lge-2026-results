@@ -16,7 +16,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,800&family=JetBrains+Mono:wght@400;600&family=Inter:wght@400;600&display=swap" rel="stylesheet">
 <link href="https://unpkg.com/maplibre-gl@5/dist/maplibre-gl.css" rel="stylesheet">
-<link href="assets/style.css?v=5" rel="stylesheet">
+<link href="assets/style.css?v=6" rel="stylesheet">
 </head>
 <body>
 <header class="top">
@@ -52,16 +52,16 @@
   </section>
 
   <section class="card s12 mapcard">
-    <div class="maphead">
-      <h2 id="mapTitle">The map · click a municipality to see its wards</h2>
-      <div class="mapctl">
-        <input id="search" list="munlist" placeholder="Find a municipality…" autocomplete="off">
-        <datalist id="munlist"></datalist>
-        <button id="back" class="chipbtn" hidden>← South Africa</button>
-      </div>
-    </div>
+    <h2 id="mapTitle">The map · click a municipality to see its wards</h2>
     <div class="mapwrap">
-      <div id="map"></div>
+      <div class="mapview">
+        <div id="map"></div>
+        <div class="mapctl">
+          <button id="back" class="mapbtn" hidden>← South Africa</button>
+          <input id="search" list="munlist" placeholder="Find a municipality…" autocomplete="off" aria-label="Find a municipality">
+          <datalist id="munlist"></datalist>
+        </div>
+      </div>
       <aside id="panel" class="panel"></aside>
     </div>
     <div class="legend" id="legend"></div>
@@ -92,6 +92,6 @@
 </footer>
 
 <script src="https://unpkg.com/maplibre-gl@5/dist/maplibre-gl.js"></script>
-<script src="assets/app.js?v=5"></script>
+<script src="assets/app.js?v=6"></script>
 </body>
 </html>

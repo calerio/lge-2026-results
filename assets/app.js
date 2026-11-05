@@ -257,14 +257,14 @@ function closeMunic(){
 
 function wardHtml(p, short){
   const r = typeof p.r === "string" ? JSON.parse(p.r) : p.r;
-  if(!r || !r.top.length) return `<b>Ward ${p.WardNo}</b><br>No votes counted yet`;
+  if(!r || !r.top.length) return short ? `<b>Ward ${p.WardNo}</b><br>No votes counted yet` : `<h3>Ward ${p.WardNo}</h3><small>No votes counted yet.</small>`;
   const head = `<b>Ward ${p.WardNo}</b> · ${r.vd}/${r.vdTotal} districts counted`;
   if(short) return head + `<br>${r.top.map(t => `${t[0]} ${t[1]}%`).join(" · ")}`;
   return `<h3>Ward ${p.WardNo}</h3><small>${r.vd} of ${r.vdTotal} voting districts counted · ${fmt(r.votes)} ward votes</small>` +
     r.top.map(t => `<div class="row"><span class="mono">${t[0]}</span><div class="track" style="height:12px"><div style="width:${t[1]}%;background:${col(t[0])}"></div></div><span class="mono">${t[1]}%</span></div>`).join("") +
     `<p class="note">Ward ballot only. Top three parties shown.</p>`;
 }
-function showWardPanel(p){ $("panel").innerHTML = wardHtml(p, false) + `<p style="margin-top:12px"><button class="chipbtn" onclick="nationalOrMunicPanel()">← ${latest.munics[selMunic]?.name || "Municipality"}</button></p>`; }
+function showWardPanel(p){ $("panel").innerHTML = `<button class="back" onclick="nationalOrMunicPanel()">← ${latest.munics[selMunic]?.name || "Municipality"}</button>` + wardHtml(p, false) + ""; }
 
 function nationalOrMunicPanel(){
   if(!selMunic) return nationalPanel();
@@ -281,7 +281,7 @@ function nationalOrMunicPanel(){
 
 function nationalPanel(){
   $("panel").innerHTML = `<h3>South Africa</h3><small>213 councils · ${fmt(latest.national.registered)} registered voters</small>
-    <p class="note" style="margin-top:12px">Click any municipality, or search for one above, to zoom in and see every ward.</p>
+    <p class="note" style="margin-top:12px">Click any municipality, or use the search box on the map, to zoom in and see every ward.</p>
     <p class="note">Metro cards below also jump straight to the city.</p>`;
 }
 
