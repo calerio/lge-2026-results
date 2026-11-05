@@ -42,7 +42,10 @@ async function load(manual){
   const btn = $("refresh"); btn.setAttribute("aria-busy","true"); if(manual) $("refreshLabel").textContent = "Refreshing…";
   try{
     if(manual) await fetch(API + "/refresh", {method:"POST"}).catch(() => {});   // ask the worker to check the IEC right now
-    const [l, idx] = await Promise.all([apiOr("/latest", "data/latest.json"), apiOr("/index", "data/history/index.json").catch(()=>[])]);
+    const fresh = manual ? "?fresh=1" : "";
+    const l = await apiOr("/latest" + fresh, "data/latest.json");
+    // the history index only changes when a new count arrives, so skip it otherwise
+    const idx = (!latest || l.reportDate !== latest.reportDate || !index.length) ? await apiOr("/index" + fresh, "data/history/index.json").catch(() => index) : index;
     const isNew = !latest || l.reportDate !== latest.reportDate;
     latest = l; index = idx;
     if(viewIdx === -1) show(-1);

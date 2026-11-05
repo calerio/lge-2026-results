@@ -71,9 +71,18 @@ export default {
   async fetch(req, env, ctx) {
     const url = new URL(req.url), p = url.pathname;
     if (req.method === "OPTIONS") return new Response(null, { headers: CORS });
-    if (p === "/api/latest") return json(await env.LGE.get("latest") || "null", { "Cache-Control": "no-store",
-      "X-Last-Check": new Date(+(await env.LGE.get("lastCheck") || 0)).toISOString(), "Access-Control-Expose-Headers": "X-Last-Check" });
-    if (p === "/api/index") return json(await env.LGE.get("index") || "[]", { "Cache-Control": "no-store" });
+    // Busy-day protection: latest/index are cached at the edge for 20 s, so a crowd of visitors
+    // costs a couple of KV reads per minute per data centre instead of one per page view.
+    if (p === "/api/latest" || p === "/api/index") {
+      const key = new Request("https://lge2026.internal" + p), cache = caches.default;
+      if (url.searchParams.get("fresh") !== "1") { const hit = await cache.match(key); if (hit) return hit; }
+      const body = p === "/api/latest" ? await env.LGE.get("latest") || "null" : await env.LGE.get("index") || "[]";
+      const extra = p === "/api/latest" ? { "X-Last-Check": new Date(+(await env.LGE.get("lastCheck") || 0)).toISOString(),
+        "Access-Control-Expose-Headers": "X-Last-Check" } : {};
+      const res = json(body, { "Cache-Control": "public, max-age=20", ...extra });
+      ctx.waitUntil(cache.put(key, res.clone()));
+      return res;
+    }
     let m = p.match(/^\/api\/history\/(\d{8}T\d{6}\.json)$/);
     if (m) { const v = await env.LGE.get("h:" + m[1]); return v ? json(v, { "Cache-Control": "public, max-age=86400" }) : json({ error: "not found" }); }
     if (p === "/api/refresh" && req.method === "POST") {
