@@ -243,3 +243,14 @@ footer p a{color:#fff}
 .was{display:block;font-size:11px;color:#6b6e75;font-weight:500}
 .vs21{font-weight:700;margin-left:4px;white-space:nowrap}.vs21.up{color:#1d7a3a}.vs21.dn{color:#b3261e}
 .was-line{margin:10px 0 0;font-size:13px;color:#55585f}
+
+/* municipality panel: pin button on its own line, previous elections block */
+.pinbtn,.pinned{display:block;width:max-content;max-width:100%}
+.pinbtn{margin:10px 0 12px}
+.past{margin-top:18px;padding-top:14px;border-top:2px solid #16181d}
+.past-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:8px}
+.past-head>span{font:400 22px/1 "League Gothic",sans-serif;text-transform:uppercase;letter-spacing:.01em}
+.past-tabs{display:flex;border:2px solid #16181d}
+.past-tabs button{min-height:36px;min-width:58px;padding:0 10px;border:0;background:#fff;font:700 14px Inter,sans-serif;cursor:pointer}
+.past-tabs button+button{border-left:2px solid #16181d}
+.past-tabs button[aria-selected=true]{background:#104bb4;color:#fff}

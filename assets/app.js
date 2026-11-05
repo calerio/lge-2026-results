@@ -329,10 +329,27 @@ function nationalOrMunicPanel(){
   $("panel").innerHTML = `<small>${m.prov}</small><h3>${m.name}</h3>
     ${selMunic === STELLIES ? `<p class="pinned">📌 Your municipality</p>` : `<button class="pinbtn" onclick="pinMunic('${selMunic}');document.getElementById('stellies').scrollIntoView({behavior:'smooth'})">📌 Pin as my municipality</button>`}
     <small>${(viewIdx === -1 ? m.vdPct : L?.vd ?? 0).toFixed(0)}% of districts counted · ${m.seats}/${m.seatsTotal} seats declared</small>
-    ${PAST && PAST["2021"].munics[selMunic] ? `<p class="was-line">2021: ${PAST["2021"].munics[selMunic].map(p => `${p[0]} ${p[1].toFixed(1)}%`).join(" · ")}</p>` : ""}
     ${m.hung ? `<p><span class="badge" style="background:#555b66;color:#fff">Hung council${m.done && m.parties[0] ? ` · ${m.parties[0][0]} largest party` : ""}</span></p>` : m.done && m.winner ? `<p><span class="badge" style="background:${col(m.winner)};color:${inkOn(col(m.winner))}">${m.winner} wins the council</span></p>` : ""}
     ${viewIdx !== -1 ? `<p class="note">Earlier count: ${L ? `${L.p} led with ${L.pct.toFixed(1)}%` : "nothing counted"}. Breakdown below is the latest.</p>` : ""}
-    ${m.parties.map(p => `<div class="row"><span>${p[0]}</span><div class="track" style="height:12px"><div style="width:${p[1]}%;background:${col(p[0])}"></div></div><span>${p[1].toFixed(1)}%</span></div>`).join("")}`;
+    ${m.parties.map(p => `<div class="row"><span>${p[0]}</span><div class="track" style="height:12px"><div style="width:${p[1]}%;background:${col(p[0])}"></div></div><span>${p[1].toFixed(1)}%</span></div>`).join("")}
+    ${pastBlock(selMunic)}`;
+  wirePast();
+}
+
+// Previous local elections for the open municipality: 2021 by default, 2016 one tap away.
+let pastYear = "2021";
+function pastBlock(id){
+  if(!PAST) return "";
+  const years = Object.keys(PAST).sort().reverse().filter(y => PAST[y].munics[id] && PAST[y].munics[id].length);
+  if(!years.length) return "";
+  if(!years.includes(pastYear)) pastYear = years[0];
+  const rows = PAST[pastYear].munics[id];
+  return `<div class="past"><div class="past-head"><span>Previous elections</span><div class="past-tabs" role="tablist">
+      ${years.map(y => `<button role="tab" aria-selected="${y === pastYear}" data-year="${y}">${y}</button>`).join("")}</div></div>
+    ${rows.map(p => `<div class="row"><span>${p[0]}</span><div class="track" style="height:12px"><div style="width:${p[1]}%;background:${col(p[0])};opacity:.75"></div></div><span>${p[1].toFixed(1)}%</span></div>`).join("")}</div>`;
+}
+function wirePast(){
+  document.querySelectorAll(".past-tabs button").forEach(b => b.onclick = () => { pastYear = b.dataset.year; nationalOrMunicPanel(); });
 }
 
 function nationalPanel(){
