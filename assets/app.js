@@ -47,7 +47,7 @@ async function load(manual){
     latest = l; index = idx;
     if(viewIdx === -1) show(-1);
     setupSlider();
-    if(isNew || !$("stelliesBody").dataset.done){ $("stelliesBody").dataset.done = 1; stellies(); }
+    if(isNew || !$("stelliesBody").dataset.done){ $("stelliesBody").dataset.done = 1; stellies(); jhb(); }
     if(isNew && selMunic) { delete wardCache[selMunic]; openMunic(selMunic, false); }
     if(manual){ $("refreshLabel").textContent = isNew ? "Updated" : "Up to date"; setTimeout(() => $("refreshLabel").textContent = "Refresh", 1500); }
     if(isNew && manual && !matchMedia("(prefers-reduced-motion: reduce)").matches) ["pct","duel","bars"].forEach(id => { const e = $(id); e.classList.remove("flash"); void e.offsetWidth; e.classList.add("flash"); });
@@ -305,6 +305,42 @@ function wirePicker(){
   const i = $("stPick"); if(i) i.onchange = () => { const f = munGeo?.features.find(f => nice(f.properties).toLowerCase() === i.value.toLowerCase()); if(f) pinMunic(f.id); };
   const r = $("stReset"); if(r) r.onclick = () => pinMunic("9911");
 }
+/* ---------------- Johannesburg battleground (always shown) ---------------- */
+const JHB = "3003";
+async function jhb(){
+  const m = latest.munics[JHB];
+  if(!m){ $("jhbBody").innerHTML = `<p class="note">No Johannesburg results yet.</p>`; return; }
+  let blue = 0, wardsTotal = 0, wardsCounted = 0, tally = {}, all = 0;
+  try{
+    const d = await fetch(`${API}/wards/${JHB}`).then(r => r.json());
+    for(const w of d.WardResults || []){
+      wardsTotal++;
+      for(const p of w.PartyBallotResults){ const k = shortName(p.Name), v = p.TotalValidVotes || 0; tally[k] = (tally[k] || 0) + v; all += v; }
+      const top = w.PartyBallotResults.slice().sort((a, b) => b.WardVotes - a.WardVotes)[0];
+      if(top && top.WardVotes){ wardsCounted++; if(top.Name === "DEMOCRATIC ALLIANCE") blue++; }
+    }
+  }catch(e){}
+  // Party shares across all ballots, summed from the ward file (the summary only lists the leader).
+  const ps = all ? Object.entries(tally).map(([k, v]) => [k, 100 * v / all]).filter(p => p[1] >= 1).sort((a, b) => b[1] - a[1]).slice(0, 6) : m.parties, da = ps.find(p => p[0] === "DA") || ["DA", 0, 0], rivals = ps.filter(p => p[0] !== "DA");
+  const max = Math.max(55, ...ps.map(p => p[1]));
+  const toMaj = Math.max(0, 50 - da[1]);
+  $("jhbBody").innerHTML = `
+    <div class="jhb-top">
+      <div><div class="jhb-big">${da[1].toFixed(1)}%</div><div class="jhb-sub">DA in Joburg · ${m.vdPct.toFixed(0)}% counted</div></div>
+      <div class="jhb-maj">${da[1] >= 50 ? "<b>Majority</b> on current count" : `<b>${toMaj.toFixed(1)} pts</b> short of a majority`}</div>
+    </div>
+    <div class="jhb-bars">
+      ${ps.map(p => `<div class="jhb-row"><span>${p[0]}</span><div class="track"><div style="width:${p[1] / max * 100}%;background:${col(p[0])}"></div><i style="left:${50 / max * 100}%"></i></div><b>${p[1].toFixed(1)}%</b></div>`).join("")}
+    </div>
+    <div class="jhb-facts">
+      ${wardsTotal ? `<div><b>${blue}</b><span>of ${wardsTotal} wards blue</span></div>` : ""}
+      <div><b>${m.seats}/${m.seatsTotal}</b><span>seats declared</span></div>
+      ${rivals[0] ? `<div><b>${(da[1] - rivals[0][1]).toFixed(1)} pts</b><span>${da[1] >= rivals[0][1] ? "ahead of" : "behind"} ${rivals[0][0]}</span></div>` : ""}
+    </div>
+    <button class="jhb-go" id="jhbGo">See Joburg's wards on the map</button>`;
+  $("jhbGo").onclick = () => { openMunic(JHB, true); $("mapTitle").scrollIntoView({behavior:"smooth", block:"start"}); };
+}
+
 async function stellies(){
   try{
     const d = await fetch(`${API}/wards/${STELLIES}`).then(r => r.json());

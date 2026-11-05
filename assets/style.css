@@ -215,3 +215,20 @@ footer p a{color:#fff}
 .pinbtn:active{transform:translate(2px,2px);box-shadow:1px 1px 0 #cf2027}
 .pinned{margin:6px 0;font-weight:700;color:#104bb4}
 @media(max-width:600px){#stPick{flex:1 1 100%;max-width:none}.st-reset{flex:1 1 100%}}
+
+/* Johannesburg battleground */
+.jhb{border-top:6px solid #104bb4}
+.jhb-top{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;margin-bottom:14px}
+.jhb-big{font:400 76px/1 "Abril Fatface",serif;color:#2f6fdf}
+.jhb-sub{font-weight:600;color:#55585f}
+.jhb-maj{font-size:15px;color:#16181d}.jhb-maj b{font:400 30px "League Gothic",sans-serif;margin-right:4px}
+.jhb-row{display:grid;grid-template-columns:70px 1fr 64px;gap:10px;align-items:center;margin:8px 0;font-weight:700}
+.jhb-row b{text-align:right;font-variant-numeric:tabular-nums}
+.jhb-row .track{position:relative;height:22px;overflow:visible}
+.jhb-row .track div{height:100%}
+.jhb-row .track i{position:absolute;top:-4px;bottom:-4px;width:2px;background:#16181d}
+.jhb-facts{display:flex;gap:28px;flex-wrap:wrap;margin:16px 0}
+.jhb-facts b{display:block;font:400 34px/1 "League Gothic",sans-serif}
+.jhb-facts span{font-size:13px;color:#55585f}
+.jhb-go{min-height:48px;padding:0 20px;border:0;background:#f7a11f;color:#16181d;font:700 15px Inter,sans-serif;box-shadow:4px 4px 0 #cf2027;cursor:pointer}
+.jhb-go:active{transform:translate(2px,2px);box-shadow:2px 2px 0 #cf2027}
