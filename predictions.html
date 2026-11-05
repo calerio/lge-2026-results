@@ -29,19 +29,19 @@
 
   <section class="card" id="how">
     <h2>How it works</h2>
-    <p>The count so far can mislead, because some kinds of areas report before others. The projection corrects for that. It's inspired by the CSIR's approach, not a copy of it:</p>
+    <p>The count so far can mislead, because some kinds of areas report before others. The projection corrects for that. It follows the general idea of the CSIR's election-night projections (compare like with like). It's our own simplified version and hasn't been checked against theirs.</p>
     <ol>
       <li><b>Group every voting district by how it voted in 2021</b>: its province, DA share and ANC share.</li>
       <li><b>Measure how each counted district changed since 2021</b>: every party's share, and how many ballots were cast.</li>
       <li><b>Fill in each uncounted district</b> with the change of a counted district from its own group, applied to its 2021 result.</li>
       <li><b>Repeat hundreds of times.</b> The middle run is the projection; 90% of runs fall inside the range shown.</li>
     </ol>
-    <p>A projection is only shown once at least 90% of the uncounted vote has five or more counted look-alike districts to learn from. "Districts counted" is the share of voting districts in, not of votes. Shares are of all ballots combined, as on the rest of the site. Council seats and majorities depend on how ward and list seats are allocated, which this doesn't model, so it only projects vote share.</p>
+    <p>A projection is only shown once at least 90% of the uncounted vote has five or more counted districts with a similar 2021 result to learn from. "Districts counted" is the share of voting districts in, not of votes. Shares are of all ballots combined, as on the rest of the site. Council seats, majorities and who controls a council depend on how ward and list seats are allocated and on coalitions, which this doesn't model. It only projects vote share.</p>
   </section>
 
   <section class="card" id="test">
     <h2>Tested on 2021</h2>
-    <p>We hid part of the 2021 count, revealed it in two orders, and asked the model to predict the 2021 result from 2016, then checked against what actually happened.</p>
+    <p>We replayed the 2021 count. At 10%, 25%, 50% and 75% of districts counted, the model used only those districts and the 2016 results to predict the final 2021 result. We tried a typical order and a worst-case order, then compared with what happened.</p>
     <div id="backtest"></div>
   </section>
 </main>
@@ -51,6 +51,6 @@
   <p class="madeby">Made by <a href="https://valeriocosta.com">Valerio Costa</a></p>
 </footer>
 
-<script src="assets/predictions.js?v=10"></script>
+<script src="assets/predictions.js?v=11"></script>
 </body>
 </html>

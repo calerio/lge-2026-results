@@ -64,12 +64,12 @@ function metroTable(metros, hist){
     const pts = hist.map(h => h.metros && h.metros[id]).filter(Boolean).map(x => ({vdPct: x.vdPct, reliable: x.reliable, DA: x.parties.DA}));
     const detail = `<tr class="pr-detail" ${open.has(id) ? "" : "hidden"} id="d-${id}"><td colspan="5">${m.reliable && lead.short !== "DA" ? `<p class="pr-lead">Projected leader: <b>${lead.short}</b> ${lead.proj[1].toFixed(1)}%</p>` : ""}
       ${m.reliable ? partyRows(m.parties.slice(0, 4)) + spark(pts, "DA projection as " + name + "'s count went on")
-        : `<p>${(m.coverage * 100).toFixed(0)}% of the uncounted vote has enough counted look-alike stations. A projection appears at 90%.</p>`}</td></tr>`;
+        : `<p>${(m.coverage * 100).toFixed(0)}% of the uncounted vote has enough counted districts with a similar 2021 result. A projection appears once that reaches 90%.</p>`}</td></tr>`;
     return `<tr class="pr-line" data-id="${id}" tabindex="0" aria-expanded="${open.has(id)}" aria-controls="d-${id}">
       <th scope="row">${esc(name)}<small class="pr-sub">${pct.toFixed(0)}% of districts</small></th><td class="c-opt">${pct.toFixed(0)}%</td><td>${da ? da.now.toFixed(1) + "%" : "–"}</td><td>${daCell}</td><td class="c-opt">${status}</td></tr>${detail}`;
   }).join("");
   return `<div class="pr-tablewrap"><table class="pr-table">
-    <thead><tr><th scope="col">Metro</th><th scope="col" class="c-opt">Districts counted</th><th scope="col"><span class="lg">DA </span>so far</th><th scope="col"><span class="lg">DA </span>projected</th><th scope="col" class="c-opt">Projected leader</th></tr></thead>
+    <thead><tr><th scope="col">Metro</th><th scope="col" class="c-opt">Voting districts counted</th><th scope="col"><span class="lg">DA </span>so far</th><th scope="col"><span class="lg">DA </span>projected</th><th scope="col" class="c-opt">Projected leader</th></tr></thead>
     <tbody>${rows}</tbody></table></div><p class="note">Tap a metro for every party and how its projection moved.</p>`;
 }
 
@@ -95,7 +95,7 @@ function evaluation(b){
   return orders.map(o => `<h4 class="bt-h4">${o === "mixed" ? "Typical counting order" : "Worst-case order (most pro-DA areas first)"}</h4>
     <div class="pr-tablewrap"><table class="bt"><thead><tr><th>Districts counted</th><th>Projected</th><th>Real result inside range</th><th>Typical miss <small>(vs count-so-far)</small></th></tr></thead><tbody>
     ${stages.map(s => `<tr><td>${s}%</td>${cell(b.byStage[o + "|" + s])}</tr>`).join("")}</tbody></table></div>`).join("") +
-    `<p class="note">Misses are in percentage points of vote share, for the DA, ANC and EFF across the eight metros. "Count-so-far" treats the count at that stage as the final result. Every published range contained the real result, more often than the 90% the ranges aim for, so they are on the cautious side. Withheld means the safety rule held the projection back.</p>`;
+    `<p class="note">Misses are in percentage points of vote share, for the DA, ANC and EFF across the eight metros. "Count-so-far" treats the count at that stage as the final result. In this one test, every published range contained the real result, so the ranges may be wider than needed. One past election is a small sample. Withheld means the safety rule held the projection back.</p>`;
 }
 
 // After the count: score the projections we actually published against the final result.
