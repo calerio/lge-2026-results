@@ -129,8 +129,11 @@ def write():
     sys.path.insert(0, HERE)
     import update
     t0 = time.time()
-    now, then, prov = load_inputs()
     latest = json.load(open(os.path.join(DATA, "latest.json")))
+    cur = os.path.join(DATA, "projection_national.json")
+    if "--force" not in sys.argv and os.path.exists(cur) and json.load(open(cur)).get("reportDate") == latest["reportDate"]:
+        print("national projection unchanged"); return
+    now, then, prov = load_inputs()
     names = {p["id"]: p["short"] for p in latest["national"]["parties"]}
     for m in latest["munics"].values():
         pass
