@@ -254,3 +254,5 @@ footer p a{color:#fff}
 .past-tabs button{min-height:36px;min-width:58px;padding:0 10px;border:0;background:#fff;font:700 14px Inter,sans-serif;cursor:pointer}
 .past-tabs button+button{border-left:2px solid #16181d}
 .past-tabs button[aria-selected=true]{background:#104bb4;color:#fff}
+
+.madeby{margin-top:6px}
