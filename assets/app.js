@@ -228,7 +228,7 @@ function initMap(){
     return d; }, onRemove(){}}, "top-right");
   map.on("load", async () => {
     document.querySelector(".maplibregl-ctrl-attrib")?.classList.remove("maplibregl-compact-show");  // start folded
-    munGeo = await getJSON("geo/munics.json");
+    munGeo = await geoReady;
     munGeo.features.forEach(f => f.id = f.properties.MunicId);
     map.addSource("mun", {type:"geojson", data:munGeo});
     map.addLayer({id:"mun-fill", type:"fill", source:"mun", paint:{"fill-color":["coalesce", ["feature-state", "c"], NOCOUNT],
@@ -442,7 +442,12 @@ $("refresh").onclick = () => load(true);
 setInterval(() => { if(viewIdx === -1) load(false); else stamp(); }, 180000);
 addEventListener("resize", trend);
 document.addEventListener("visibilitychange", () => { if(!document.hidden && viewIdx === -1) load(false); });
-pastReady.finally(() => load(false).then(initMap));
+// Numbers first. The map library, boundary file and tiles load in the background and the map appears when ready.
+const mapLib = new Promise((ok, no) => { const s = document.createElement("script"); s.src = "https://unpkg.com/maplibre-gl@5/dist/maplibre-gl.js"; s.onload = ok; s.onerror = no; document.head.appendChild(s); });
+const geoReady = getJSON("geo/munics.json");
+geoReady.catch(() => {});
+const firstLoad = pastReady.finally(() => load(false));
+Promise.all([mapLib, geoReady, firstLoad]).then(() => initMap()).catch(() => { const m = $("map"); if(m) m.innerHTML = '<p class="note">The map could not load. The results above are unaffected.</p>'; });
 
 // count this visit (no cookies; see worker /api/hit)
 try{
