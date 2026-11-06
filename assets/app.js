@@ -12,6 +12,9 @@ const when = d => new Date(d).toLocaleString("en-ZA",{weekday:"short",day:"numer
 const hm = d => new Date(d).toLocaleTimeString("en-ZA",{hour:"2-digit",minute:"2-digit",timeZone:"Africa/Johannesburg"});
 const bust = () => "?t=" + Date.now();
 const METROS = ["JHB","CPT","ETH","TSH","EKU","NMA","BUF","MAN"];
+// The cities people know each metro by (official names stay as the IEC writes them)
+const AKA = {ETH:"Durban", TSH:"Pretoria", EKU:"East Rand", NMA:"Gqeberha (Port Elizabeth)", BUF:"East London", MAN:"Bloemfontein"};
+const akaFor = code => AKA[code] ? `<span class="aka">${AKA[code]}</span>` : "";
 
 const API = "https://lge2026.nologna.workers.dev/api";
 // Ward ballot leaders for one municipality, from the IEC's raw file (same logic as scripts/update.py).
@@ -166,9 +169,9 @@ function render(s, prevI){
   $("metros").innerHTML = METROS.map(code => {
     const [id, m] = Object.entries(full).find(([, m]) => m.code === code) || [];
     if(!m) return "";
-    const L = munLeader(id); if(!L) return `<button class="metro" data-id="${id}"><h3>${m.name}</h3><small>No votes counted yet</small></button>`;
+    const L = munLeader(id); if(!L) return `<button class="metro" data-id="${id}"><h3>${m.name}</h3>${akaFor(code)}<small>No votes counted yet</small></button>`;
     const second = m.parties[1];
-    return `<button class="metro" data-id="${id}"><h3>${m.name}</h3><div class="sh" style="color:${col(L.p)}">${L.pct.toFixed(1)}%</div>
+    return `<button class="metro" data-id="${id}"><h3>${m.name}</h3>${akaFor(code)}<div class="sh" style="color:${col(L.p)}">${L.pct.toFixed(1)}%</div>
       <span class="who">${sw(L.p)}${L.p}${second && viewIdx === -1 ? ` <small>· next ${second[0]} ${second[1].toFixed(1)}%</small>` : ""}</span>
       <small>${L.vd.toFixed(0)}% counted</small>
       <div class="prog" style="width:${L.vd}%"></div></button>`;
@@ -239,7 +242,9 @@ function initMap(){
     const list = $("munlist");
     munGeo.features.map(f => f.properties).sort((a, b) => nice(a).localeCompare(nice(b)))
       .forEach(p => list.insertAdjacentHTML("beforeend", `<option value="${nice(p)}">`));
-    $("search").onchange = e => { const f = munGeo.features.find(f => nice(f.properties).toLowerCase() === e.target.value.toLowerCase()); if(f){ openMunic(String(f.id), true); e.target.value = ""; e.target.blur(); } };
+    Object.entries(AKA).forEach(([code, city]) => { const f = munGeo.features.find(f => f.properties.MunicCode === code);
+      if(f) list.insertAdjacentHTML("beforeend", `<option value="${city.replace(/ \(.*$/, "")} (${nice(f.properties)})">`); });
+    $("search").onchange = e => { const f = munGeo.features.find(f => (nice(f.properties).toLowerCase() === e.target.value.toLowerCase() || (AKA[f.properties.MunicCode] || "").toLowerCase().startsWith(e.target.value.toLowerCase().replace(/ \(.*$/, "")) && e.target.value.length > 3)); if(f){ openMunic(String(f.id), true); e.target.value = ""; e.target.blur(); } };
     paintMap();
     const tip = new maplibregl.Popup({closeButton:false, closeOnClick:false, offset:8});
     map.on("mousemove", "mun-fill", e => {

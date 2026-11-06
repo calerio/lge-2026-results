@@ -8,6 +8,7 @@ const get = u => fetch(u + (u.includes("?") ? "&" : "?") + "t=" + Date.now()).th
 const hm = d => new Date(d).toLocaleString("en-ZA", {weekday:"short", hour:"2-digit", minute:"2-digit", timeZone:"Africa/Johannesburg"}) + " SAST";
 const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const SHORT = {"City of Johannesburg":"Johannesburg","City of Cape Town":"Cape Town","City of Tshwane":"Tshwane"};
+const AKA = {"4005":"Durban","3004":"Pretoria","3002":"East Rand","1001":"Gqeberha (Port Elizabeth)","1117":"East London","2207":"Bloemfontein"};
 const ORDER = ["3003", "9006", "3004", "3002", "1001", "4005", "2207", "1117"];
 let open = new Set(JSON.parse(sessionStorage.getItem("prOpen") || "[]"));
 
@@ -67,7 +68,7 @@ function metroTable(metros, hist){
       ${m.reliable ? `${lead.short !== "DA" ? `<p class="pr-lead">The ${lead.short} is likely to finish largest.</p>` : ""}${partyRows(m.parties.slice(0, 4))}${spark(pts, "DA estimate at each count in " + name)}`
         : `<p>Too few districts like the ones still to come in ${esc(name)} have reported. An estimate will appear once enough have.</p>`}</td></tr>`;
     return `<tr class="pr-line" data-id="${id}" tabindex="0" aria-expanded="${open.has(id)}" aria-controls="d-${id}">
-      <th scope="row">${esc(name)}<small class="pr-sub">${pct.toFixed(0)}% counted</small></th>
+      <th scope="row">${esc(name)}${AKA[id] ? `<small class="pr-aka">${AKA[id]}</small>` : ""}<small class="pr-sub">${pct.toFixed(0)}% counted</small></th>
       <td class="c-opt">${pct.toFixed(0)}%</td><td>${da ? da.now.toFixed(1) + "%" : "–"}</td><td class="pr-endcell">${end}</td></tr>${detail}`;
   }).join("");
   return `<div class="pr-tablewrap"><table class="pr-table">

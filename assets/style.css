@@ -265,4 +265,5 @@ footer p a{color:#fff}
 .jhb-proj{margin:4px 0 16px;font-size:15px}.jhb-proj span{color:#55585f}.jhb-proj a{font-weight:700}
 
 /* even-width digits only where numbers line up; body text keeps normal punctuation */
-table,.bar,.kv,.jhb-row,.jhb-facts,.st-ward,.pr-num,.pl-now,.pl-end,.pr-endcell,.status,.duel,.metro .sh,#pct,#stamp{font-variant-numeric:tabular-nums}
+table,.bar,.kv,.jhb-row,.jhb-facts span,.st-ward,.pr-num,.pl-now,.pl-end,.pr-endcell,#stamp{font-variant-numeric:tabular-nums}
+.metro .aka{display:block;font-size:13px;color:#55585f;margin-top:-2px}
