@@ -11,20 +11,23 @@ const SHORT = {"City of Johannesburg":"Johannesburg","City of Cape Town":"Cape T
 const ORDER = ["3003", "9006", "3004", "3002", "1001", "4005", "2207", "1117"];
 let open = new Set(JSON.parse(sessionStorage.getItem("prOpen") || "[]"));
 
-function rangeBar(p, max){
-  const [lo, md, hi] = p.proj, x = v => Math.min(v / max, 1) * 100;
-  return `<div class="pr-track" aria-hidden="true">
-    <i class="pr-band" style="left:${x(lo)}%;width:${Math.max(x(hi) - x(lo), .6)}%;background:${col(p.short)}"></i>
-    <i class="pr-mid" style="left:${x(md)}%;background:${col(p.short)}"></i>
-    <i class="pr-now" style="left:${x(p.now)}%"></i></div>`;
+// Plain-language rows: "now X% → likely about Y%", range in small print, arrow for direction.
+const about = v => v < 10 ? v.toFixed(1) : Math.round(v);
+function change(now, md){
+  const d = md - now;
+  if(Math.abs(d) < 0.5) return `<span class="chg same" title="About the same">→</span>`;
+  return `<span class="chg ${d > 0 ? "up" : "down"}" title="${d > 0 ? "Likely to rise" : "Likely to fall"}">${d > 0 ? "▲" : "▼"}</span>`;
 }
 function partyRows(parties){
-  const max = Math.max(50, ...parties.map(p => p.proj[2] + 4));
-  return parties.map(p => `<div class="pr-row"><span class="pr-party">${esc(p.short)}</span>${rangeBar(p, max)}
-    <span class="pr-num"><b>${p.proj[1].toFixed(1)}%</b><small>${p.proj[0]}–${p.proj[2]}</small></span>
-    <span class="pr-was">count ${p.now.toFixed(1)}%</span></div>`).join("") +
-    `<p class="pr-key"><span class="k-band"></span>likely range (90%) <span class="k-mid"></span>projection <span class="k-now"></span>count so far</p>`;
+  return `<ul class="pl">${parties.map(p => `<li>
+    <span class="pl-dot" style="background:${col(p.short)}"></span>
+    <span class="pl-name">${esc(p.short)}</span>
+    <span class="pl-now">${p.now.toFixed(1)}% now</span>
+    ${change(p.now, p.proj[1])}
+    <span class="pl-end"><b>about ${about(p.proj[1])}%</b><small>between ${about(p.proj[0])} and ${about(p.proj[2])}</small></span>
+  </li>`).join("")}</ul>`;
 }
+
 function spark(points, label){
   const pts = points.filter(p => p && p.reliable && p.DA);
   if(pts.length < 2 || Math.max(...pts.map(p => p.vdPct)) - Math.min(...pts.map(p => p.vdPct)) < 2) return `<p class="note">The projection history appears after a few more counts.</p>`;
@@ -44,13 +47,12 @@ function spark(points, label){
 function nationalCard(n, hist){
   if(!n) return "";
   const pct = 100 * n.vdCounted / n.vdTotal;
-  if(!n.reliable) return `<section class="card pr-national"><h2>South Africa</h2><p class="pr-meta">${pct.toFixed(0)}% of voting districts counted</p><p>Not enough of the country's kinds of areas are counted yet to project fairly.</p></section>`;
-  const pts = (hist || []).map(h => ({vdPct: 100 * h.vdCounted / h.vdTotal, reliable: h.reliable, DA: (h.parties.find(p => p.short === "DA") || {}).proj && [h.parties.find(p => p.short === "DA").now, ...h.parties.find(p => p.short === "DA").proj]}));
-  return `<section class="card pr-national"><h2>South Africa</h2>
-    <p class="pr-meta">${pct.toFixed(0)}% of voting districts counted · projected final share of all ballots</p>
-    ${(() => { const r = pts.filter(p => p.reliable).map(p => p.vdPct); return r.length > 1 && Math.max(...r) - Math.min(...r) >= 2; })()
-      ? `<div class="pr-nat-grid"><div>${partyRows(n.parties.filter(p => p.short !== "Other").slice(0, 6))}</div><div>${spark(pts, "DA projection as the national count went on")}</div></div>`
-      : `<div class="pr-nat-solo">${partyRows(n.parties.filter(p => p.short !== "Other").slice(0, 6))}</div>`}
+  const head = `<h2>South Africa</h2><p class="pr-meta">${pct.toFixed(0)}% of voting districts counted</p>`;
+  if(!n.reliable) return `<section class="card pr-national">${head}<p>Not enough of the country is counted yet to estimate the finish fairly.</p></section>`;
+  const pts = (hist || []).map(h => { const d = h.parties.find(p => p.short === "DA"); return {vdPct: 100 * h.vdCounted / h.vdTotal, reliable: h.reliable, DA: d && [d.now, ...d.proj]}; });
+  return `<section class="card pr-national">${head}
+    ${partyRows(n.parties.filter(p => p.short !== "Other").slice(0, 6))}
+    <details class="pr-more"><summary>How the estimate moved</summary>${spark(pts, "DA: estimated finish as the national count went on")}</details>
   </section>`;
 }
 
@@ -58,19 +60,19 @@ function metroTable(metros, hist){
   const rows = metros.map(m => {
     const id = String(m.munic), pct = 100 * m.vdCounted / m.vdTotal, name = SHORT[m.name] || m.name;
     const da = m.parties.find(p => p.short === "DA"), lead = m.parties[0];
-    const status = !m.reliable ? `<span class="pr-tag wait">Not enough data yet</span>`
-      : `<b>${lead.short}</b> ${lead.proj[1].toFixed(1)}%`;
-    const daCell = m.reliable && da ? `<b>${da.proj[1].toFixed(1)}%</b> <small class="rng">${da.proj[0]}–${da.proj[2]}</small>` : "–";
+    const end = m.reliable && da ? `${change(da.now, da.proj[1])} <b>about ${about(da.proj[1])}%</b><small class="rng">between ${about(da.proj[0])} and ${about(da.proj[2])}</small>`
+      : `<span class="pr-tag wait">too early to tell</span>`;
     const pts = hist.map(h => h.metros && h.metros[id]).filter(Boolean).map(x => ({vdPct: x.vdPct, reliable: x.reliable, DA: x.parties.DA}));
-    const detail = `<tr class="pr-detail" ${open.has(id) ? "" : "hidden"} id="d-${id}"><td colspan="5">${m.reliable && lead.short !== "DA" ? `<p class="pr-lead">Projected leader: <b>${lead.short}</b> ${lead.proj[1].toFixed(1)}%</p>` : ""}
-      ${m.reliable ? partyRows(m.parties.slice(0, 4)) + spark(pts, "DA projection as " + name + "'s count went on")
-        : `<p>${(m.coverage * 100).toFixed(0)}% of the uncounted vote has enough counted districts with a similar 2021 result. A projection appears once that reaches 90%.</p>`}</td></tr>`;
+    const detail = `<tr class="pr-detail" ${open.has(id) ? "" : "hidden"} id="d-${id}"><td colspan="4">
+      ${m.reliable ? `${lead.short !== "DA" ? `<p class="pr-lead">Likely largest party: <b>${lead.short}</b></p>` : ""}${partyRows(m.parties.slice(0, 4))}${spark(pts, "DA: estimated finish as " + name + "'s count went on")}`
+        : `<p>Too few districts like ${esc(name)}'s uncounted ones have reported yet, so there's no fair estimate. It appears automatically once there are.</p>`}</td></tr>`;
     return `<tr class="pr-line" data-id="${id}" tabindex="0" aria-expanded="${open.has(id)}" aria-controls="d-${id}">
-      <th scope="row">${esc(name)}<small class="pr-sub">${pct.toFixed(0)}% of districts</small></th><td class="c-opt">${pct.toFixed(0)}%</td><td>${da ? da.now.toFixed(1) + "%" : "–"}</td><td>${daCell}</td><td class="c-opt">${status}</td></tr>${detail}`;
+      <th scope="row">${esc(name)}<small class="pr-sub">${pct.toFixed(0)}% counted</small></th>
+      <td class="c-opt">${pct.toFixed(0)}%</td><td>${da ? da.now.toFixed(1) + "%" : "–"}</td><td class="pr-endcell">${end}</td></tr>${detail}`;
   }).join("");
   return `<div class="pr-tablewrap"><table class="pr-table">
-    <thead><tr><th scope="col">Metro</th><th scope="col" class="c-opt">Voting districts counted</th><th scope="col"><span class="lg">DA </span>so far</th><th scope="col"><span class="lg">DA </span>projected</th><th scope="col" class="c-opt">Projected leader</th></tr></thead>
-    <tbody>${rows}</tbody></table></div><p class="note">Tap a metro for every party and how its projection moved.</p>`;
+    <thead><tr><th scope="col">Metro</th><th scope="col" class="c-opt">Counted</th><th scope="col">DA now</th><th scope="col">DA at the end</th></tr></thead>
+    <tbody>${rows}</tbody></table></div><p class="note">Tap a metro to see every party.</p>`;
 }
 
 function nationalEvaluation(nb){
@@ -135,7 +137,7 @@ async function load(){
       get("data/projection_national.json").catch(() => null), get("data/projection_national_history.json").catch(() => []),
       get("data/backtest.json").catch(() => null), get("https://lge2026.nologna.workers.dev/api/latest").catch(() => null)]);
     const nb = await get("data/backtest_national.json").catch(() => null);
-    $("asof").textContent = `Projected from the IEC count of ${hm(p.reportDate)}.`;
+    $("asof").innerHTML = `<span class="live-dot"></span>A rolling estimate: redone from scratch with every new IEC count (checked every 5 minutes). Latest: the count of&nbsp;<b>${hm(p.reportDate)}</b>.`;
     const behind = live && live.reportDate && (new Date(live.reportDate) - new Date(p.reportDate)) > 20 * 60000;
     $("stale").hidden = !behind;
     if(behind) $("stale").textContent = `These projections use the count of ${hm(p.reportDate)}; the live count has moved on to ${hm(live.reportDate)}. They'll catch up shortly.`;
