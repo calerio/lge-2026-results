@@ -24,7 +24,7 @@ function partyRows(parties){
     <span class="pl-name">${esc(p.short)}</span>
     <span class="pl-now">${p.now.toFixed(1)}% now</span>
     ${change(p.now, p.proj[1])}
-    <span class="pl-end"><b>about ${about(p.proj[1])}%</b><small>between ${about(p.proj[0])} and ${about(p.proj[2])}</small></span>
+    <span class="pl-end"><b>about ${about(p.proj[1])}%</b><small>likely ${about(p.proj[0])}% to ${about(p.proj[2])}%</small></span>
   </li>`).join("")}</ul>`;
 }
 
@@ -48,11 +48,11 @@ function nationalCard(n, hist){
   if(!n) return "";
   const pct = 100 * n.vdCounted / n.vdTotal;
   const head = `<h2>South Africa</h2><p class="pr-meta">${pct.toFixed(0)}% of voting districts counted</p>`;
-  if(!n.reliable) return `<section class="card pr-national">${head}<p>Not enough of the country is counted yet to estimate the finish fairly.</p></section>`;
+  if(!n.reliable) return `<section class="card pr-national">${head}<p>Too little of the country is counted to make a fair estimate yet.</p></section>`;
   const pts = (hist || []).map(h => { const d = h.parties.find(p => p.short === "DA"); return {vdPct: 100 * h.vdCounted / h.vdTotal, reliable: h.reliable, DA: d && [d.now, ...d.proj]}; });
   return `<section class="card pr-national">${head}
     ${partyRows(n.parties.filter(p => p.short !== "Other").slice(0, 6))}
-    <details class="pr-more"><summary>How the estimate moved</summary>${spark(pts, "DA: estimated finish as the national count went on")}</details>
+    <details class="pr-more"><summary>How the estimate moved</summary>${spark(pts, "DA estimate at each count, nationally")}</details>
   </section>`;
 }
 
@@ -60,19 +60,19 @@ function metroTable(metros, hist){
   const rows = metros.map(m => {
     const id = String(m.munic), pct = 100 * m.vdCounted / m.vdTotal, name = SHORT[m.name] || m.name;
     const da = m.parties.find(p => p.short === "DA"), lead = m.parties[0];
-    const end = m.reliable && da ? `${change(da.now, da.proj[1])} <b>about ${about(da.proj[1])}%</b><small class="rng">between ${about(da.proj[0])} and ${about(da.proj[2])}</small>`
-      : `<span class="pr-tag wait">too early to tell</span>`;
+    const end = m.reliable && da ? `${change(da.now, da.proj[1])} <b>about ${about(da.proj[1])}%</b><small class="rng">likely ${about(da.proj[0])}% to ${about(da.proj[2])}%</small>`
+      : `<span class="pr-tag wait">not enough counted yet</span>`;
     const pts = hist.map(h => h.metros && h.metros[id]).filter(Boolean).map(x => ({vdPct: x.vdPct, reliable: x.reliable, DA: x.parties.DA}));
     const detail = `<tr class="pr-detail" ${open.has(id) ? "" : "hidden"} id="d-${id}"><td colspan="4">
-      ${m.reliable ? `${lead.short !== "DA" ? `<p class="pr-lead">Likely largest party: <b>${lead.short}</b></p>` : ""}${partyRows(m.parties.slice(0, 4))}${spark(pts, "DA: estimated finish as " + name + "'s count went on")}`
-        : `<p>Too few districts like ${esc(name)}'s uncounted ones have reported yet, so there's no fair estimate. It appears automatically once there are.</p>`}</td></tr>`;
+      ${m.reliable ? `${lead.short !== "DA" ? `<p class="pr-lead">The ${lead.short} is likely to finish largest.</p>` : ""}${partyRows(m.parties.slice(0, 4))}${spark(pts, "DA estimate at each count in " + name)}`
+        : `<p>Too few districts like the ones still to come in ${esc(name)} have reported. An estimate will appear once enough have.</p>`}</td></tr>`;
     return `<tr class="pr-line" data-id="${id}" tabindex="0" aria-expanded="${open.has(id)}" aria-controls="d-${id}">
       <th scope="row">${esc(name)}<small class="pr-sub">${pct.toFixed(0)}% counted</small></th>
       <td class="c-opt">${pct.toFixed(0)}%</td><td>${da ? da.now.toFixed(1) + "%" : "–"}</td><td class="pr-endcell">${end}</td></tr>${detail}`;
   }).join("");
   return `<div class="pr-tablewrap"><table class="pr-table">
-    <thead><tr><th scope="col">Metro</th><th scope="col" class="c-opt">Counted</th><th scope="col">DA now</th><th scope="col">DA at the end</th></tr></thead>
-    <tbody>${rows}</tbody></table></div><p class="note">Tap a metro to see every party.</p>`;
+    <thead><tr><th scope="col">Metro</th><th scope="col" class="c-opt">Counted</th><th scope="col">DA now</th><th scope="col">DA likely finish</th></tr></thead>
+    <tbody>${rows}</tbody></table></div><p class="note">Tap a metro to see the other parties.</p>`;
 }
 
 function nationalEvaluation(nb){
@@ -83,21 +83,21 @@ function nationalEvaluation(nb){
     const pub = rs[0].published, da = rs.find(r => r.party === "DA");
     return `<tr><td>${o === "mixed" ? "Typical" : "Worst case"}</td><td>${st}%</td>${pub
       ? `<td>${da.count}%</td><td><b>${da.proj}%</b> <small>${da.lo}–${da.hi}</small></td><td>${da.real}%</td><td>${rs.filter(r => r.inside).length}/${rs.length}</td>`
-      : `<td>${da.count}%</td><td colspan="2" class="muted">withheld</td><td>–</td>`}</tr>`; };
-  return `<h3 class="bt-h">South Africa, 2021 predicted from 2016</h3><div class="pr-tablewrap"><table class="bt">
-    <thead><tr><th>Order</th><th>Counted</th><th>DA in count</th><th>DA projected</th><th>DA real</th><th>Real inside range <small>(DA, ANC, EFF)</small></th></tr></thead>
+      : `<td>${da.count}%</td><td colspan="2" class="muted">held back</td><td>–</td>`}</tr>`; };
+  return `<h3 class="bt-h">South Africa</h3><div class="pr-tablewrap"><table class="bt">
+    <thead><tr><th>Order</th><th>Counted</th><th>DA in the count</th><th>Our estimate</th><th>Real result</th><th>Real result in our range <small>(DA, ANC, EFF)</small></th></tr></thead>
     <tbody>${["mixed", "worst case"].flatMap(o => stages.map(st => line(o, st))).join("")}</tbody></table></div>`;
 }
 
 function evaluation(b){
   if(!b || !b.byStage) return "";
   const stages = [10, 25, 50, 75], orders = ["mixed", "worst case"];
-  const cell = s => !s || !s.published ? `<td colspan="3" class="muted">withheld</td>`
-    : `<td>${s.published / 3} of ${s.n / 3} metros</td><td>${s.inside}/${s.published} <small>party results</small></td><td><b>${s.medianErr.toFixed(1)}</b> <small>vs ${s.medianBaseErr.toFixed(1)}</small></td>`;
-  return orders.map(o => `<h4 class="bt-h4">${o === "mixed" ? "Typical counting order" : "Worst-case order (most pro-DA areas first)"}</h4>
-    <div class="pr-tablewrap"><table class="bt"><thead><tr><th>Districts counted</th><th>Projected</th><th>Real result inside range</th><th>Typical miss <small>(vs count-so-far)</small></th></tr></thead><tbody>
+  const cell = s => !s || !s.published ? `<td colspan="3" class="muted">held back</td>`
+    : `<td>${s.published / 3} of ${s.n / 3} metros</td><td>${s.inside}/${s.published} <small>party results</small></td><td><b>${s.medianErr.toFixed(1)}</b> <small>(${s.medianBaseErr.toFixed(1)})</small></td>`;
+  return orders.map(o => `<h4 class="bt-h4">${o === "mixed" ? "Typical counting order" : "Worst-case order, most pro-DA areas first"}</h4>
+    <div class="pr-tablewrap"><table class="bt"><thead><tr><th>Districts in</th><th>Estimates published</th><th>Real result in our range</th><th>Typical miss <small>(count taken as final)</small></th></tr></thead><tbody>
     ${stages.map(s => `<tr><td>${s}%</td>${cell(b.byStage[o + "|" + s])}</tr>`).join("")}</tbody></table></div>`).join("") +
-    `<p class="note">Misses are in percentage points of vote share, for the DA, ANC and EFF across the eight metros. "Count-so-far" treats the count at that stage as the final result. In this one test, every published range contained the real result, so the ranges may be wider than needed. One past election is a small sample. Withheld means the safety rule held the projection back.</p>`;
+    `<p class="note">Misses are in percentage points of vote share for the DA, ANC and EFF across the eight metros. The number in brackets is what you'd get by treating the count at that stage as final. In this one test, every range we published contained the real result, so the ranges may be wider than they need to be. One past election is a small sample.</p>`;
 }
 
 // After the count: score the projections we actually published against the final result.
@@ -110,12 +110,12 @@ function howClose(h, nh, p, n){
     const near = series.filter(x => x.vdPct >= st && x.vdPct < next);   // only projections made at this stage
     const e = near.find(x => x.reliable);
     if(!e){
-      const why = !series.length || series[0].vdPct >= next ? "projections started later in the count" : "held back (not enough data)";
+      const why = !series.length || series[0].vdPct >= next ? "no estimate yet at this stage" : "held back, too little counted";
       return `<tr><td>${label}</td><td>${st}%</td><td colspan="4" class="muted">${why}</td></tr>`;
     }
     const [now, lo, md, hi] = e.DA, f = final;
     return `<tr><td>${label}</td><td>${st}% <small>(${e.vdPct.toFixed(0)}%)</small></td><td>${md.toFixed(1)}% <small>${lo}–${hi}</small></td><td>${f.toFixed(1)}%</td>
-      <td><b>${Math.abs(md - f).toFixed(1)}</b> <small>vs ${Math.abs(now - f).toFixed(1)}</small></td><td>${lo <= f && f <= hi ? "yes" : "no"}</td></tr>`;
+      <td><b>${Math.abs(md - f).toFixed(1)}</b> <small>(${Math.abs(now - f).toFixed(1)})</small></td><td>${lo <= f && f <= hi ? "yes" : "no"}</td></tr>`;
   }).join("");
   const natFinal = (n.parties.find(x => x.short === "DA") || {}).now;
   const natSeries = (nh || []).map(x => { const d = x.parties.find(q => q.short === "DA"); return {vdPct: 100 * x.vdCounted / x.vdTotal, reliable: x.reliable, DA: d && [d.now, ...d.proj]}; }).filter(x => x.DA);
@@ -126,8 +126,8 @@ function howClose(h, nh, p, n){
     body += rowsFor(SHORT[m.name] || m.name, series, d.now);
   }
   return `<section class="card" id="close"><h2>How close were we?</h2>
-    <p>The DA projection we published as each stage of the count was reached, against the final count.</p>
-    <div class="pr-tablewrap"><table class="bt"><thead><tr><th>Place</th><th>Stage <small>(actual)</small></th><th>We projected</th><th>Final</th><th>Miss <small>(vs count-so-far)</small></th><th>Inside range</th></tr></thead>
+    <p>For each stage of the count, the DA estimate we published live, compared with the final count.</p>
+    <div class="pr-tablewrap"><table class="bt"><thead><tr><th>Place</th><th>Stage <small>(actual)</small></th><th>Our estimate</th><th>Final</th><th>Miss <small>(count taken as final)</small></th><th>Inside range</th></tr></thead>
     <tbody>${body}</tbody></table></div><p class="note">Provisional until the IEC declares the results. Only projections published live during the count are scored, not ones recomputed afterwards.</p></section>`;
 }
 
@@ -137,7 +137,7 @@ async function load(){
       get("data/projection_national.json").catch(() => null), get("data/projection_national_history.json").catch(() => []),
       get("data/backtest.json").catch(() => null), get("https://lge2026.nologna.workers.dev/api/latest").catch(() => null)]);
     const nb = await get("data/backtest_national.json").catch(() => null);
-    $("asof").innerHTML = `<span class="live-dot"></span>A rolling estimate: redone from scratch with every new IEC count (checked every 5 minutes). Latest: the count of&nbsp;<b>${hm(p.reportDate)}</b>.`;
+    $("asof").innerHTML = `<span class="live-dot"></span>Recalculated with every new IEC count, which we check for every five minutes. This version uses the count from ${hm(p.reportDate)}.`;
     const behind = live && live.reportDate && (new Date(live.reportDate) - new Date(p.reportDate)) > 20 * 60000;
     $("stale").hidden = !behind;
     if(behind) $("stale").textContent = `These projections use the count of ${hm(p.reportDate)}; the live count has moved on to ${hm(live.reportDate)}. They'll catch up shortly.`;

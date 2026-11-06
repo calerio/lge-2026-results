@@ -97,3 +97,11 @@
 .pr-detail .pl{max-width:720px}
 .pr-spark{max-width:480px}
 @media(max-width:600px){.pl li{grid-template-columns:10px 76px 1fr 16px auto;gap:6px}.pl-name{font-size:15px}.pl-now{font-size:12px}}
+
+#how p,#test>p{margin:0 0 12px}#how ol{margin:0 0 14px}
+@media(max-width:600px){
+  .pr-table thead th:first-child{width:38%}
+  .pr-endcell b{font-size:15px}.pr-endcell small{font-size:11px}
+  .pr-table td,.pr-table th{padding:10px 4px}
+  .pr-table td:last-child{padding-right:2px}
+}

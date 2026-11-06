@@ -12,13 +12,13 @@
 <meta name="theme-color" content="#104bb4">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=League+Gothic&display=swap" rel="stylesheet">
-<link href="assets/style.css?v=26" rel="stylesheet">
-<link href="assets/predictions.css?v=16" rel="stylesheet">
+<link href="assets/style.css?v=28" rel="stylesheet">
+<link href="assets/predictions.css?v=20" rel="stylesheet">
 </head>
 <body>
 <div class="masthead">
   <h1>Predictions</h1>
-  <p class="pr-intro">The count so far is lopsided, because some areas report before others. This estimates where each party will end up once every district is counted.</p>
+  <p class="pr-intro">Some areas report before others, so the count so far leans one way. This page estimates where each party is likely to finish once every voting district is in.</p>
   <p id="asof">Loading…</p>
   <nav class="pagenav" aria-label="Pages"><a href="./">Live results</a><a href="predictions.html" aria-current="page">Predictions</a></nav>
 </div>
@@ -30,28 +30,29 @@
 
   <section class="card" id="how">
     <h2>How it works</h2>
-    <p>The count so far can mislead, because some kinds of areas report before others. The projection corrects for that. It follows the general idea of the CSIR's election-night projections (compare like with like). It's our own simplified version and hasn't been checked against theirs.</p>
+    <p>Areas that report early often vote differently from the ones still to come, so we compare each district with how it voted in 2021. The method follows the general idea behind the CSIR's election-night projections, in a simpler form of our own that hasn't been checked against theirs.</p>
     <ol>
-      <li><b>Group every voting district by how it voted in 2021</b>: its province, DA share and ANC share.</li>
-      <li><b>Measure how each counted district changed since 2021</b>: every party's share, and how many ballots were cast.</li>
-      <li><b>Fill in each uncounted district</b> with the change of a counted district from its own group, applied to its 2021 result.</li>
-      <li><b>Repeat hundreds of times.</b> The middle run is the projection; 90% of runs fall inside the range shown.</li>
+      <li>Every voting district is grouped by its 2021 result: province, DA share and ANC share.</li>
+      <li>For each counted district, we measure how much each party's share and the number of ballots changed since 2021.</li>
+      <li>Each uncounted district takes the change from a counted district in its group, applied to its own 2021 result.</li>
+      <li>We repeat that 2,000 times for each metro and 600 times nationally. The middle result is the estimate, and 90% of the runs fall inside the range shown.</li>
     </ol>
-    <p>A projection is only shown once at least 90% of the uncounted vote has five or more counted districts with a similar 2021 result to learn from. "Districts counted" is the share of voting districts in, not of votes. Shares are of all ballots combined, as on the rest of the site. Council seats, majorities and who controls a council depend on how ward and list seats are allocated and on coalitions, which this doesn't model. It only projects vote share.</p>
+    <p>An estimate only appears once at least 90% of the uncounted vote has five or more counted districts with a similar 2021 result. "Counted" means voting districts reported, which isn't the same as votes counted.</p>
+    <p>The figures are shares of all ballots combined, like the rest of the site. Parties and the media usually quote the party-list ballot alone, so their numbers can differ by about a point. We only estimate vote share. Council seats and control depend on how ward and list seats are allocated and on coalitions, which we don't model.</p>
   </section>
 
   <section class="card" id="test">
     <h2>Tested on 2021</h2>
-    <p>We replayed the 2021 count. At 10%, 25%, 50% and 75% of districts counted, the model used only those districts and the 2016 results to predict the final 2021 result. We tried a typical order and a worst-case order, then compared with what happened.</p>
+    <p>We replayed the 2021 count. At 10%, 25%, 50% and 75% of districts in, the model saw only those districts and the 2016 results, and estimated the final 2021 result. We ran it once in a typical reporting order and once in a worst-case order, with the most pro-DA areas first.</p>
     <div id="backtest"></div>
   </section>
 </main>
 
 <footer>
-  <p>Source: IEC results feed (<a href="https://results.elections.org.za/dashboards/lge/">results.elections.org.za</a>). Projections are our own estimates, not IEC figures. Not affiliated with the IEC.</p>
+  <p>Source: IEC results feed (<a href="https://results.elections.org.za/dashboards/lge/">results.elections.org.za</a>). The estimates are ours, not the IEC's. Not affiliated with the IEC.</p>
   <p class="madeby">Made by <a href="https://valeriocosta.com">Valerio Costa</a></p>
 </footer>
 
-<script src="assets/predictions.js?v=16"></script>
+<script src="assets/predictions.js?v=19"></script>
 </body>
 </html>
