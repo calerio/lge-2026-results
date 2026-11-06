@@ -22,7 +22,7 @@ button{font-family:var(--f-body)}
 .status{position:sticky;top:0;z-index:50;background:var(--blue);color:#fff;
   padding:10px var(--pad);padding-top:max(10px,env(safe-area-inset-top))}
 .status :focus-visible{outline-color:#fff}
-.st-row{display:flex;align-items:center;gap:18px;max-width:1280px;margin:0 auto}
+.st-row{display:flex;align-items:center;gap:18px;max-width:calc(1280px - 2 * var(--pad));margin:0 auto}
 .st-count{display:flex;align-items:center;gap:8px;white-space:nowrap}
 .dot{width:10px;height:10px;border-radius:50%;background:var(--orange);animation:pulse 1.6s infinite;flex-shrink:0}
 .past .dot{background:transparent;border:2px solid #fff;animation:none}
@@ -47,7 +47,7 @@ button{font-family:var(--f-body)}
 
 /* ---------- masthead ---------- */
 .masthead{background:var(--blue);padding:20px var(--pad) 28px}
-.masthead h1,.masthead p{max-width:1280px;margin:0 auto}
+.masthead h1,.masthead p,.masthead .pagenav{max-width:calc(1280px - 2 * var(--pad));margin-left:auto;margin-right:auto}
 .masthead h1{font:400 clamp(36px,7vw,84px)/.95 var(--f-display);color:var(--orange);text-transform:uppercase;text-shadow:5px 5px 0 var(--red)}
 .masthead p{color:#fff;font-size:17px;line-height:1.45;margin-top:12px}
 
@@ -267,3 +267,7 @@ footer p a{color:#fff}
 /* even-width digits only where numbers line up; body text keeps normal punctuation */
 table,.bar,.kv,.jhb-row,.jhb-facts span,.st-ward,.pr-num,.pl-now,.pl-end,.pr-endcell,#stamp{font-variant-numeric:tabular-nums}
 .metro .aka{display:block;font-size:13px;color:#55585f;margin-top:-2px}
+.masthead .pagenav{margin-top:16px}
+.masthead .pagenav:empty{display:none}
+.masthead p{text-wrap:pretty}
+.masthead #asof{margin:6px auto 0}

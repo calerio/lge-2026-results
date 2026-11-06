@@ -14,19 +14,20 @@ let open = new Set(JSON.parse(sessionStorage.getItem("prOpen") || "[]"));
 
 // Plain-language rows: "now X% → likely about Y%", range in small print, arrow for direction.
 const about = v => v < 10 ? v.toFixed(1) : Math.round(v);
+const range = (lo, hi) => String(about(lo)) === String(about(hi)) ? `${about(lo)}%` : `${about(lo)}% to ${about(hi)}%`;
 function change(now, md){
   const d = md - now;
   if(Math.abs(d) < 0.5) return `<span class="chg same" title="About the same">→</span>`;
   return `<span class="chg ${d > 0 ? "up" : "down"}" title="${d > 0 ? "Likely to rise" : "Likely to fall"}">${d > 0 ? "▲" : "▼"}</span>`;
 }
 function partyRows(parties){
-  return `<ul class="pl">${parties.map(p => `<li>
-    <span class="pl-dot" style="background:${col(p.short)}"></span>
-    <span class="pl-name">${esc(p.short)}</span>
-    <span class="pl-now">${p.now.toFixed(1)}% now</span>
-    ${change(p.now, p.proj[1])}
-    <span class="pl-end"><b>about ${about(p.proj[1])}%</b><small>likely ${about(p.proj[0])}% to ${about(p.proj[2])}%</small></span>
-  </li>`).join("")}</ul>`;
+  return `<table class="pt"><thead><tr><th scope="col">Party</th><th scope="col">Now</th><th scope="col">Likely finish</th><th scope="col" class="pt-rng">Likely range</th></tr></thead><tbody>
+    ${parties.map(p => `<tr>
+      <th scope="row"><span class="pt-sw" style="background:${col(p.short)}"></span>${esc(p.short)}</th>
+      <td class="pt-now">${p.now.toFixed(1)}%</td>
+      <td class="pt-end">${change(p.now, p.proj[1])}<b>${about(p.proj[1])}%</b></td>
+      <td class="pt-rng">${range(p.proj[0], p.proj[2])}</td>
+    </tr>`).join("")}</tbody></table>`;
 }
 
 function spark(points, label){
@@ -61,18 +62,18 @@ function metroTable(metros, hist){
   const rows = metros.map(m => {
     const id = String(m.munic), pct = 100 * m.vdCounted / m.vdTotal, name = SHORT[m.name] || m.name;
     const da = m.parties.find(p => p.short === "DA"), lead = m.parties[0];
-    const end = m.reliable && da ? `${change(da.now, da.proj[1])} <b>about ${about(da.proj[1])}%</b><small class="rng">likely ${about(da.proj[0])}% to ${about(da.proj[2])}%</small>`
-      : `<span class="pr-tag wait">not enough counted yet</span>`;
+    const end = m.reliable && da ? `${change(da.now, da.proj[1])}<b>${about(da.proj[1])}%</b>` : `<span class="pr-tag wait">not enough counted yet</span>`;
+    const rng = m.reliable && da ? range(da.proj[0], da.proj[2]) : "";
     const pts = hist.map(h => h.metros && h.metros[id]).filter(Boolean).map(x => ({vdPct: x.vdPct, reliable: x.reliable, DA: x.parties.DA}));
-    const detail = `<tr class="pr-detail" ${open.has(id) ? "" : "hidden"} id="d-${id}"><td colspan="4">
+    const detail = `<tr class="pr-detail" ${open.has(id) ? "" : "hidden"} id="d-${id}"><td colspan="5">
       ${m.reliable ? `${lead.short !== "DA" ? `<p class="pr-lead">The ${lead.short} is likely to finish largest.</p>` : ""}${partyRows(m.parties.slice(0, 4))}${spark(pts, "DA estimate at each count in " + name)}`
         : `<p>Too few districts like the ones still to come in ${esc(name)} have reported. An estimate will appear once enough have.</p>`}</td></tr>`;
     return `<tr class="pr-line" data-id="${id}" tabindex="0" aria-expanded="${open.has(id)}" aria-controls="d-${id}">
       <th scope="row">${esc(name)}${AKA[id] ? `<small class="pr-aka">${AKA[id]}</small>` : ""}<small class="pr-sub">${pct.toFixed(0)}% counted</small></th>
-      <td class="c-opt">${pct.toFixed(0)}%</td><td>${da ? da.now.toFixed(1) + "%" : "–"}</td><td class="pr-endcell">${end}</td></tr>${detail}`;
+      <td class="c-opt">${pct.toFixed(0)}%</td><td class="pt-now">${da ? da.now.toFixed(1) + "%" : "–"}</td><td class="pt-end">${end}</td><td class="pt-rng">${rng}</td></tr>${detail}`;
   }).join("");
   return `<div class="pr-tablewrap"><table class="pr-table">
-    <thead><tr><th scope="col">Metro</th><th scope="col" class="c-opt">Counted</th><th scope="col">DA now</th><th scope="col">DA likely finish</th></tr></thead>
+    <thead><tr><th scope="col">Metro</th><th scope="col" class="c-opt">Counted</th><th scope="col">DA now</th><th scope="col">DA likely finish</th><th scope="col" class="pt-rng">Likely range</th></tr></thead>
     <tbody>${rows}</tbody></table></div><p class="note">Tap a metro to see the other parties.</p>`;
 }
 
@@ -138,7 +139,7 @@ async function load(){
       get("data/projection_national.json").catch(() => null), get("data/projection_national_history.json").catch(() => []),
       get("data/backtest.json").catch(() => null), get("https://lge2026.nologna.workers.dev/api/latest").catch(() => null)]);
     const nb = await get("data/backtest_national.json").catch(() => null);
-    $("asof").innerHTML = `<span class="live-dot"></span>Recalculated with every new IEC count, which we check for every five minutes. This version uses the count from ${hm(p.reportDate)}.`;
+    $("asof").innerHTML = `Recalculated with every new IEC count, which we check for every five minutes. This version uses the count from ${hm(p.reportDate)}.`;
     const behind = live && live.reportDate && (new Date(live.reportDate) - new Date(p.reportDate)) > 20 * 60000;
     $("stale").hidden = !behind;
     if(behind) $("stale").textContent = `These projections use the count of ${hm(p.reportDate)}; the live count has moved on to ${hm(live.reportDate)}. They'll catch up shortly.`;
