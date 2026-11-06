@@ -206,7 +206,7 @@ function trend(){
   g += `<text x="${W - P}" y="${H - 1}" text-anchor="end">share of districts counted →</text>`;
   parties.forEach(p => {
     const pts = index.filter(s => s.parties[p] != null).map(s => [x(s.vdPct), y(s.parties[p])]);
-    g += `<polyline fill="none" stroke="${col(p)}" stroke-width="2.5" points="${pts.join(" ")}"/>` + pts.map(([a, b]) => `<circle cx="${a}" cy="${b}" r="2.5" fill="${col(p)}"/>`).join("");
+    g += `<polyline fill="none" stroke="${col(p)}" stroke-width="2.5" points="${pts.join(" ")}"/>`;
     const [lx, ly] = pts[pts.length - 1]; g += `<text x="${lx + 4}" y="${ly + 4}" style="fill:${col(p)};font-weight:700">${p}</text>`;
   });
   if(viewIdx !== -1) g += `<line x1="${x(index[viewIdx].vdPct)}" x2="${x(index[viewIdx].vdPct)}" y1="${P / 2}" y2="${H - P}" stroke="#0b357f" stroke-dasharray="4 3"/>`;

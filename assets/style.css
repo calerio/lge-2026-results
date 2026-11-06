@@ -101,12 +101,10 @@ details[open]>summary:before{content:"▾"}
 /* tables */
 .tablewrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
 table{border-collapse:collapse;width:100%;font-size:15px}
-th{font:400 18px var(--f-cond);text-transform:uppercase;letter-spacing:.03em;color:var(--mute);text-align:left;padding:8px 12px;border-bottom:2px solid var(--ink);white-space:nowrap}
+th{font:600 13px var(--f-body);color:var(--mute);text-align:left;padding:8px 12px;border-bottom:2px solid var(--ink);white-space:nowrap}
 td{padding:10px 12px;height:44px;border-bottom:1px solid var(--line);white-space:nowrap}
-tbody tr:nth-child(even) td{background:#faf7f0}
 td.n,th.n{text-align:right}
 td:first-child,th:first-child{position:sticky;left:0;background:var(--card);z-index:1}
-tbody tr:nth-child(even) td:first-child{background:#faf7f0}
 .stack{display:flex;height:12px;min-width:140px;gap:1px;background:#fff}
 .chip{display:inline-flex;align-items:center;gap:6px;font-weight:600;font-size:14px;color:var(--ink)}
 .chip i{display:inline-block;width:12px;height:12px}
