@@ -20,7 +20,7 @@
   <h1>Predictions</h1>
   <p class="pr-intro">Some areas report before others, so the count so far leans one way. This page estimates where each party is likely to finish once every voting district is in.</p>
   <p id="asof">Loading…</p>
-  <nav class="pagenav" aria-label="Pages"><a href="./">Live results</a><a href="predictions.html" aria-current="page">Predictions</a></nav>
+  <nav class="pagenav" id="pagenav" aria-label="Pages"></nav>
 </div>
 
 <div id="stale" class="stale" role="status" hidden></div>
@@ -54,5 +54,7 @@
 </footer>
 
 <script src="assets/predictions.js?v=21"></script>
+<script src="assets/core.js?v=1"></script>
+<script>LGE.renderNav(document.getElementById("pagenav"), "predictions");</script>
 </body>
 </html>

@@ -7,3 +7,4 @@ worker/.wrangler/
 __pycache__/
 data/cache2021/
 data/cache2026/
+data/raw/

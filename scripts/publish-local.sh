@@ -5,8 +5,9 @@ git pull -q --rebase --autostash || exit 1
 python3 -I scripts/update.py || exit 1
 python3 -I scripts/project.py --write || true
 uv run -q --with numpy python scripts/project_national.py || true
+python3 -I scripts/archive.py --refresh-current || true
 for f in data/latest.json data/history data/wards data/projections.json data/projections_history.json \
-         data/projection_national.json data/projection_national_history.json; do
+         data/projection_national.json data/projection_national_history.json data/archive/2026; do
   [ -e "$f" ] && git add "$f"
 done
 git diff --cached --quiet && exit 0

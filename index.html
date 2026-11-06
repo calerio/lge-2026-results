@@ -37,7 +37,7 @@
 <div class="masthead">
   <h1>Local Elections 2026</h1>
   <p>Live IEC results, updated as the count comes in</p>
-  <nav class="pagenav" aria-label="Pages"><a href="./" aria-current="page">Live results</a><a href="predictions.html">Predictions</a></nav>
+  <nav class="pagenav" id="pagenav" aria-label="Pages"></nav>
 </div>
 
 <main>
@@ -100,5 +100,7 @@
 
 <script src="https://unpkg.com/maplibre-gl@5/dist/maplibre-gl.js"></script>
 <script src="assets/app.js?v=29"></script>
+<script src="assets/core.js?v=1"></script>
+<script>LGE.renderNav(document.getElementById("pagenav"), "live");</script>
 </body>
 </html>
