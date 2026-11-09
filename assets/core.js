@@ -10,9 +10,9 @@
   const PAGES = [
     {href: "./", label: "Live results", key: "live", ready: true},
     {href: "predictions.html", label: "Predictions", key: "predictions", ready: true},
-    {href: "shift.html", label: "The shift", key: "shift", ready: false},
-    {href: "explore.html", label: "Every result", key: "explore", ready: false},
-    {href: "votes.html", label: "Where votes changed", key: "votes", ready: false},
+    {href: "shift.html", label: "The shift", key: "shift", ready: true},
+    {href: "explore.html", label: "Every result", key: "explore", ready: true},
+    {href: "votes.html", label: "Where votes changed", key: "votes", ready: true},
   ];
   function renderNav(el, current){
     if(!el) return;
@@ -106,6 +106,106 @@
   async function pinnedCode(){ const i = await munIndex(); return i.byId[localStorage.getItem("myMunic") || "9911"] || "WC024"; }
   async function pinCode(code){ const i = await munIndex(); if(i.byCode[code]) localStorage.setItem("myMunic", String(i.byCode[code])); }
 
+  // The visitor's own pin only (no default), so pages never preselect a place silently.
+  async function pinnedOnly(){ let v = null; try{ v = localStorage.getItem("myMunic"); }catch(e){} if(!v) return null; const i = await munIndex(); return i.byId[v] || null; }
+
+  // ---------- comparisons (shared by all three pages) ----------
+  // data/archive/compare.json (scripts/compare.py) says which municipalities and wards can be compared
+  // with 2021/2016: a municipality only if no voting district moved across its boundary, a ward only
+  // if it has exactly the same voting districts as one earlier ward.
+  const compareInfo = () => json("data/archive/compare.json");
+  const points = () => json("geo/points.json");
+  const BALLOT_LABEL = {pr: "Municipal PR ballot", ward: "Ward ballot"};
+  // DA votes and valid votes on one ballot. Missing ballot or no valid votes -> null (missing is not zero).
+  function daOf(unit, ballot){
+    const b = unit && unit.ballots && unit.ballots[ballot];
+    if(!b || !(b.valid > 0)) return null;
+    return {d: b.votes[DA] || 0, v: b.valid, contested: DA in b.votes, share: 100 * (b.votes[DA] || 0) / b.valid};
+  }
+  // One comparison: both years, share change in pp, vote change as an integer. Never mixes ballots.
+  function changeRow(cur, base, ballot){
+    const a = daOf(base, ballot), b = daOf(cur, ballot);
+    if(!a || !b) return null;
+    return {d0: a.d, v0: a.v, s0: a.share, d1: b.d, v1: b.v, s1: b.share, dpp: b.share - a.share, dvotes: b.d - a.d};
+  }
+  // Leading party on one ballot, with its lead over the runner-up in pp. Ties are reported, not broken.
+  function leader(unit, ballot){
+    const b = unit && unit.ballots && unit.ballots[ballot]; if(!b || !(b.valid > 0)) return null;
+    const r = Object.entries(b.votes).sort((x, y) => y[1] - x[1]);
+    if(!r.length) return null;
+    const s = v => 100 * v / b.valid;
+    return {party: r[0][0], share: s(r[0][1]), runner: r[1] ? r[1][0] : null, lead: s(r[0][1]) - (r[1] ? s(r[1][1]) : 0),
+      tie: !!(r[1] && r[1][1] === r[0][1])};
+  }
+  // Pool units (municipalities or wards): sum counts first, then divide. Any missing unit -> null.
+  function pool(units, ballot){
+    let d = 0, v = 0; for(const u of units){ const x = daOf(u, ballot); if(!x) return null; d += x.d; v += x.v; }
+    return v > 0 ? {d, v, share: 100 * d / v} : null;
+  }
+
+  // ---------- CSV (safe for spreadsheets) ----------
+  function csvCell(x){
+    if(x == null) return "";
+    if(typeof x === "number") return Number.isFinite(x) ? String(x) : "";
+    let s = String(x);
+    if(/^[=+\-@\t\r]/.test(s)) s = "'" + s;   // stop spreadsheets running text labels as formulas
+    return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  }
+  function downloadCSV(name, header, rows){
+    const text = [header, ...rows].map(r => r.map(csvCell).join(",")).join("\n");
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([text], {type: "text/csv"})); a.download = name;
+    document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  }
+
+  // ---------- search (municipalities and wards) ----------
+  // items: [{label, sub, code, keys?}]. Exact name/code first, then prefix, then other matches.
+  function searchItems(items, q, max = 8){
+    q = q.trim().toLowerCase(); if(!q) return [];
+    const out = [];
+    for(const it of items){
+      const l = it.label.toLowerCase(), c = (it.code || "").toLowerCase(), k = it.keys || "";
+      let r = -1;
+      if(l === q || c === q) r = 0; else if(l.startsWith(q) || c.startsWith(q)) r = 1;
+      else if(k.startsWith(q) || l.includes(q)) r = 2; else if(q.split(/\s+/).every(t => (l + " " + c + " " + k).includes(t))) r = 3;
+      if(r >= 0) out.push([r, it]);
+    }
+    return out.sort((a, b) => a[0] - b[0] || a[1].label.localeCompare(b[1].label)).slice(0, max).map(x => x[1]);
+  }
+  // Accessible combobox on an <input> and a <ul>: arrows move, Enter picks, Escape closes.
+  function combobox(input, list, getItems, onPick, empty = "No matching municipality or ward"){
+    let items = [], act = -1, t;
+    input.setAttribute("role", "combobox"); input.setAttribute("aria-autocomplete", "list");
+    input.setAttribute("aria-expanded", "false"); input.setAttribute("aria-controls", list.id); list.setAttribute("role", "listbox");
+    list.hidden = true;
+    const close = () => { list.hidden = true; input.setAttribute("aria-expanded", "false"); input.removeAttribute("aria-activedescendant"); act = -1; };
+    const draw = () => {
+      list.innerHTML = items.length ? items.map((it, i) => `<li role="option" id="${list.id}-${i}" aria-selected="${i === act}"><b>${esc(it.label)}</b> <span>${esc(it.sub || "")}</span></li>`).join("")
+        : `<li class="cb-empty">${empty}</li>`;
+      list.hidden = false; input.setAttribute("aria-expanded", "true");
+      if(act >= 0) input.setAttribute("aria-activedescendant", `${list.id}-${act}`);
+      list.querySelectorAll("li[id]").forEach((li, i) => li.onmousedown = e => { e.preventDefault(); pick(i); });
+    };
+    const pick = i => { const it = items[i]; if(!it) return; close(); input.value = ""; onPick(it); };
+    input.addEventListener("input", () => { clearTimeout(t); t = setTimeout(() => { items = getItems(input.value); act = -1; input.value.trim() ? draw() : close(); }, 150); });
+    input.addEventListener("keydown", e => {
+      if(e.key === "ArrowDown" || e.key === "ArrowUp"){ if(!items.length) return; e.preventDefault(); act = (act + (e.key === "ArrowDown" ? 1 : -1) + items.length) % items.length; draw(); }
+      else if(e.key === "Enter"){ if(items.length){ e.preventDefault(); pick(act >= 0 ? act : 0); } }
+      else if(e.key === "Escape") close();
+    });
+    input.addEventListener("blur", () => setTimeout(close, 120));
+  }
+  const wardNo = id => +String(id).slice(-3);   // IEC ward ids end in the 3-digit ward number
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"}[c]));
+  function announce(msg){ const el = document.getElementById("announce"); if(el) el.textContent = msg; }
+  // Province names as in the IEC boundary files, with their usual codes for links.
+  const PROV = {"Eastern Cape": "EC", "Free State": "FS", "Gauteng": "GP", "KwaZulu-Natal": "KZN", "Limpopo": "LIM",
+    "Mpumalanga": "MP", "North West": "NW", "Northern Cape": "NC", "Western Cape": "WC"};
+  const provByCode = c => Object.keys(PROV).find(k => PROV[k] === c) || null;
+  const prefersReduced =() => matchMedia("(prefers-reduced-motion: reduce)").matches;
+
   window.LGE = {PAGES, renderNav, DA, partyShort, partyColour, titleCase, fmtVotes, share, pooledShare, fmtPct, fmtPP, fmtDelta,
-    parseIEC, fmtSAST, snapshot, statusLine, wardBaseline, munIndex, pinnedCode, pinCode};
+    parseIEC, fmtSAST, snapshot, statusLine, wardBaseline, munIndex, pinnedCode, pinCode, pinnedOnly,
+    compareInfo, points, BALLOT_LABEL, daOf, changeRow, leader, pool, downloadCSV, csvCell, searchItems, combobox, wardNo, esc,
+    announce, prefersReduced, json, PROV, provByCode};
 })();

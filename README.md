@@ -9,8 +9,9 @@ It shows national, provincial, municipal and ward results on a clickable map.
 
 The Electoral Commission (IEC) publishes the files behind its own results dashboard at
 `results.elections.org.za/dashboards/lge/MapsJason/2026/` (the IEC's spelling). A Cloudflare Worker (`worker/`) checks the national file every five minutes and whenever a visitor presses
-Refresh (at most once a minute), and serves the results to the page. The GitHub Action
-(`.github/workflows/update.yml`) runs `scripts/update.py` as a static fallback. It fetches the national
+Refresh (at most once a minute), and serves the results to the page. `scripts/publish-local.sh` runs `scripts/update.py`, the projections and the archive refresh
+every five minutes and pushes the small static files (ward summaries, projections) that the pages read.
+The GitHub Action in `.github/workflows/update.yml` does the same job but is currently disabled. It fetches the national
 file, refetches ward results only for municipalities whose report time has changed, and commits
 compact JSON to `data/`. Each new IEC report is also kept in `data/history/`, which drives the
 page's time slider and trend chart.
@@ -38,6 +39,24 @@ districts with a similar 2021 result, or when under a tenth of the vote is left.
 Every published projection is kept in `data/projections_history.json` and
 `data/projection_national_history.json`, with the IEC snapshot it used, the model version and the
 time it was published, so it can be scored against the final result afterwards.
+
+## Results archive
+
+`scripts/archive.py` builds `data/archive/<year>/` for 2016, 2021 and 2026 from the IEC's
+"Downloadable detailed results" files (one CSV per province: every voting district, ballot type and
+party). It stores municipality totals by ballot and per-municipality files with ward and voting
+district results. The analysis pages read the party-list (PR) ballot from here. 2026 stays marked
+provisional until `data/archive/2026/FINAL` exists.
+
+## Analysis pages
+
+`shift.html` (The shift), `explore.html` (Every result) and `votes.html` (Where votes changed) read the
+archive above and share `assets/core.js` (calculations, search, CSV) and `assets/atlas.js` (the map).
+`scripts/compare.py` decides which places can be compared with 2021 and 2016 and writes
+`data/archive/compare.json`, plus label points (`geo/points.json`) and province outlines
+(`geo/provinces.json`). A municipality is compared only if no voting district moved across its
+boundary; a ward only if it has exactly the same voting districts as an earlier ward. Re-run it after
+rebuilding the archive: `uv run -q --with shapely python scripts/compare.py`.
 
 ## Boundaries
 

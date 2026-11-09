@@ -5,30 +5,77 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>The shift · LGE 2026</title>
 <meta name="description" content="Where DA support rose and fell between the 2021 and 2026 local elections.">
-<meta name="robots" content="noindex">
+<meta property="og:title" content="The shift · LGE 2026">
+<meta property="og:description" content="Where DA support rose and fell between the 2021 and 2026 local elections.">
+<meta property="og:image" content="https://calerio.github.io/lge-2026-results/share/og.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=League+Gothic&display=swap" rel="stylesheet">
 <link href="assets/style.css?v=37" rel="stylesheet">
-<link href="assets/pages.css?v=3" rel="stylesheet">
+<link href="assets/pages.css?v=4" rel="stylesheet">
 </head>
 <body data-page="shift">
 <div class="masthead">
   <h1>The shift</h1>
-  <p class="pg-intro">Where DA support rose and fell between the 2021 and 2026 local elections.</p>
+  <p class="pg-intro" id="lede">Where DA support rose and fell between the 2021 and 2026 local elections.</p>
   <p class="pg-basis" id="basis">Loading…</p>
   <nav class="pagenav" id="pagenav" aria-label="Pages"></nav>
 </div>
-<main id="page" aria-live="polite">
-  <section class="card pg-soon">
-    <h2>Opens after the count</h2>
-    <p>This page needs the final results. It will open here once the IEC has finished counting.</p>
+<main id="page" class="pg">
+  <form class="pg-controls" id="controls" onsubmit="return false">
+    <label>Compare with <select id="baseline"><option value="2021">2021</option><option value="2016">2016</option></select></label>
+    <label>Ballot <select id="ballot"><option value="pr">Municipal PR</option><option value="ward">Ward</option></select></label>
+    <label>Province <select id="province"><option value="">All provinces</option></select></label>
+    <label>Show <select id="measure"><option value="share">Share change</option><option value="votes">Vote change</option></select></label>
+    <div class="pg-search"><label for="q">Find a municipality or ward</label>
+      <input id="q" type="search" autocomplete="off" placeholder="Name or code, e.g. Stellenbosch or WC024"><ul id="qlist" class="cb-list"></ul></div>
+  </form>
+
+  <section class="pg-layout" aria-labelledby="mapTitle">
+    <div class="pg-mapcol">
+      <div class="pg-maphead">
+        <h2 id="mapTitle" class="pg-h2">DA share change by municipality</h2>
+        <div class="viewswitch" role="group" aria-label="Map style"><button type="button" data-view="arrows" aria-pressed="true">Arrows</button><button type="button" data-view="shading" aria-pressed="false">Shading</button></div>
+      </div>
+      <p class="pg-sum" id="summary"></p>
+      <div id="atlas" class="pg-map"></div>
+      <div class="legend" id="legend"></div>
+    </div>
+    <aside class="pg-detail" id="detail" aria-busy="false"></aside>
   </section>
+
+  <section class="sh-rank" aria-labelledby="rankTitle">
+    <h2 id="rankTitle" class="pg-h2">Largest gains and losses</h2>
+    <p class="note" id="rankNote"></p>
+    <div class="sh-rankcols">
+      <div><h3>Largest gains</h3><ol class="ranklist" id="gains"></ol></div>
+      <div><h3>Largest losses</h3><ol class="ranklist" id="losses"></ol></div>
+    </div>
+    <details class="fulltable" id="full">
+      <summary>View all</summary>
+      <div class="ft-tools">
+        <label><input type="checkbox" id="flipOnly"> <span id="flipLabel">PR lead changed only</span></label>
+        <button type="button" id="csv" class="linkbtn">Download this table (CSV)</button>
+      </div>
+      <div class="tablewrap"><table class="datatable" id="table"></table></div>
+    </details>
+  </section>
+
+  <details class="method">
+    <summary>How this is calculated</summary>
+    <p>DA share is DA votes divided by all valid votes on the same ballot in the same place. Change is in percentage points (pp): 20% to 25% is +5 pp. Vote change is the difference in DA votes. Totals for several places add the votes first and then divide; they never average percentages.</p>
+    <p>A municipality is compared only if no voting district moved between it and a neighbouring municipality between the two elections. A ward is compared only if it is made of exactly the same voting districts as one earlier ward; a ward with the same number but different districts is left out. Province and South Africa totals include every municipality, because those outer boundaries did not change.</p>
+    <p>Blue means the DA's share went up, orange that it went down. Orange does not stand for any party. Arrows show the size of the change at each place; they do not show people moving.</p>
+    <p id="methodSource"></p>
+  </details>
+  <p id="announce" class="sr-only" aria-live="polite"></p>
 </main>
 <footer>
   <p>Source: IEC detailed results files (<a href="https://results.elections.org.za/home/Downloads/ME-Results">results.elections.org.za</a>). Not affiliated with the IEC.</p>
   <p class="madeby">Made by <a href="https://valeriocosta.com">Valerio Costa</a></p>
 </footer>
-<script src="assets/core.js?v=1"></script>
-<script src="assets/pages.js?v=1"></script>
+<script src="assets/core.js?v=2"></script>
+<script src="assets/pages.js?v=2"></script>
+<script src="assets/atlas.js?v=1"></script>
+<script src="assets/shift.js?v=1"></script>
 </body>
 </html>

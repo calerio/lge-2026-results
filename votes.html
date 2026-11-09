@@ -4,31 +4,97 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Where votes changed · LGE 2026</title>
-<meta name="description" content="More votes and a higher vote share are different stories. Here is how the DA's result changed, and where.">
-<meta name="robots" content="noindex">
+<meta name="description" content="More votes and a higher vote share are different stories. How the DA's result changed, and where.">
+<meta property="og:title" content="Where votes changed · LGE 2026">
+<meta property="og:description" content="More votes and a higher vote share are different stories. How the DA's result changed, and where.">
+<meta property="og:image" content="https://calerio.github.io/lge-2026-results/share/og.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=League+Gothic&display=swap" rel="stylesheet">
 <link href="assets/style.css?v=37" rel="stylesheet">
-<link href="assets/pages.css?v=3" rel="stylesheet">
+<link href="assets/pages.css?v=4" rel="stylesheet">
 </head>
 <body data-page="votes">
 <div class="masthead">
   <h1>Where votes changed</h1>
-  <p class="pg-intro">More votes and a higher vote share are different stories. Here is how the DA's result changed, and where.</p>
+  <p class="pg-intro">How the DA's votes and vote share changed since 2021 or 2016, and where. A party can gain votes and still lose share.</p>
   <p class="pg-basis" id="basis">Loading…</p>
   <nav class="pagenav" id="pagenav" aria-label="Pages"></nav>
 </div>
-<main id="page" aria-live="polite">
-  <section class="card pg-soon">
-    <h2>Opens after the count</h2>
-    <p>This page needs the final results. It will open here once the IEC has finished counting.</p>
+<main id="page" class="pg vt">
+  <form class="pg-controls" id="controls" onsubmit="return false">
+    <label>Area <select id="scope"><option value="">South Africa</option></select></label>
+    <div class="pg-search"><label for="q">Or pick a municipality</label>
+      <input id="q" type="search" autocomplete="off" placeholder="Name or code, e.g. Stellenbosch or WC024"><ul id="qlist" class="cb-list"></ul></div>
+    <label>Compare with <select id="baseline"><option>2021</option><option>2016</option></select></label>
+  </form>
+
+  <section class="vt-ch" aria-labelledby="h-lead">
+    <h2 id="h-lead" class="vt-h">Votes and share</h2>
+    <p class="vt-lead" id="lead"></p>
+    <div class="vt-pair"><figure><figcaption>DA votes</figcaption><svg id="figVotes" class="vt-fig" role="img"></svg></figure>
+      <figure><figcaption>DA share of valid votes</figcaption><svg id="figShare" class="vt-fig" role="img"></svg></figure></div>
+    <p class="note" id="leadNote"></p>
   </section>
+
+  <section class="vt-ch" aria-labelledby="h-parties">
+    <h2 id="h-parties" class="vt-h">How the party totals moved</h2>
+    <p class="vt-p" id="partiesIntro"></p>
+    <svg id="figParties" class="vt-fig vt-wide" role="img" aria-labelledby="h-parties"></svg>
+    <p class="note" id="partiesNote"></p>
+  </section>
+
+  <section class="vt-ch" aria-labelledby="h-places">
+    <h2 id="h-places" class="vt-h">Which places added or lost DA votes</h2>
+    <p class="vt-p" id="placesIntro"></p>
+    <div id="atlas" class="pg-map vt-map"></div>
+    <div class="legend" id="legend"></div>
+    <h3 class="vt-h3">How the gains and losses add up</h3>
+    <svg id="figWaterfall" class="vt-fig vt-wide" role="img" aria-label="DA vote gains and losses by place, adding up to the net change"></svg>
+    <p class="note" id="wfNote"></p>
+  </section>
+
+  <section class="vt-ch" aria-labelledby="h-scatter">
+    <h2 id="h-scatter" class="vt-h">More votes is not always more share</h2>
+    <p class="vt-p" id="scatterIntro"></p>
+    <div class="vt-scatterwrap"><svg id="figScatter" class="vt-fig vt-wide" role="img" aria-labelledby="h-scatter"></svg><div class="atlas-tip" id="sTip" hidden></div></div>
+    <p class="note">Each circle is one place; its area shows valid votes in 2026 (ballot volume, not population). The full list is in the table below.</p>
+  </section>
+
+  <section class="vt-ch" aria-labelledby="h-cases">
+    <h2 id="h-cases" class="vt-h">Four patterns, one example each</h2>
+    <p class="vt-p" id="casesIntro"></p>
+    <div id="cases"></div>
+  </section>
+
+  <section class="vt-ch" aria-labelledby="h-sel">
+    <h2 id="h-sel" class="vt-h">How the vote change adds up</h2>
+    <p class="vt-p" id="selIntro"></p>
+    <div id="sel"></div>
+  </section>
+
+  <section class="vt-ch" aria-labelledby="h-table">
+    <h2 id="h-table" class="vt-h">Every place</h2>
+    <div class="ft-tools"><label>Show <select id="pattern"><option value="">All places</option><option value="++">More votes, higher share</option><option value="-+">Fewer votes, higher share</option><option value="+-">More votes, lower share</option><option value="--">Fewer votes, lower share</option><option value="x">Not comparable</option></select></label>
+      <button type="button" id="csv" class="linkbtn">Download this table (CSV)</button></div>
+    <div class="tablewrap"><table class="datatable" id="table"></table></div>
+  </section>
+
+  <details class="method">
+    <summary>How this is calculated</summary>
+    <p>All counts are IEC votes on the municipal party-list (PR) ballot. DA share is DA votes divided by all valid votes on that ballot. Totals add votes first and then divide.</p>
+    <p>The split of a vote change: with D for DA votes, V for valid votes and s = D/V, the change D₁ − D₀ equals a share part (s₁ − s₀) × (V₀ + V₁)/2 plus a ballot-volume part (V₁ − V₀) × (s₀ + s₁)/2. The two parts add up exactly. This is arithmetic on the counts. It cannot tell who switched party or who stayed home.</p>
+    <p>A municipality is compared only if no voting district moved across its boundary between the two elections; a ward only if it has exactly the same voting districts as an earlier ward. Province and national totals include every municipality. Party names are matched exactly, with one listed rename: “Vryheidsfront Plus” (2016, 2021) is the same party as “Vryheidsfront Plus | Freedom Front Plus” (2026).</p>
+    <p id="methodSource"></p>
+  </details>
+  <p id="announce" class="sr-only" aria-live="polite"></p>
 </main>
 <footer>
   <p>Source: IEC detailed results files (<a href="https://results.elections.org.za/home/Downloads/ME-Results">results.elections.org.za</a>). Not affiliated with the IEC.</p>
   <p class="madeby">Made by <a href="https://valeriocosta.com">Valerio Costa</a></p>
 </footer>
-<script src="assets/core.js?v=1"></script>
-<script src="assets/pages.js?v=1"></script>
+<script src="assets/core.js?v=2"></script>
+<script src="assets/pages.js?v=2"></script>
+<script src="assets/atlas.js?v=1"></script>
+<script src="assets/votes.js?v=1"></script>
 </body>
 </html>

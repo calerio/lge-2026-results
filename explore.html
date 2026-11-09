@@ -4,31 +4,64 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Every result · LGE 2026</title>
-<meta name="description" content="Every municipality, ward and voting district, on the party-list ballot.">
-<meta name="robots" content="noindex">
+<meta name="description" content="Every municipality, ward and voting district result from South Africa's 2026 local elections.">
+<meta property="og:title" content="Every result · LGE 2026">
+<meta property="og:description" content="Every municipality, ward and voting district result from South Africa's 2026 local elections.">
+<meta property="og:image" content="https://calerio.github.io/lge-2026-results/share/og.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=League+Gothic&display=swap" rel="stylesheet">
 <link href="assets/style.css?v=37" rel="stylesheet">
-<link href="assets/pages.css?v=3" rel="stylesheet">
+<link href="assets/pages.css?v=4" rel="stylesheet">
 </head>
 <body data-page="explore">
 <div class="masthead">
   <h1>Every result</h1>
-  <p class="pg-intro">Every municipality, ward and voting district, on the party-list ballot.</p>
+  <p class="pg-intro">Results for every municipality, ward and voting district, from the IEC's detailed results files.</p>
   <p class="pg-basis" id="basis">Loading…</p>
   <nav class="pagenav" id="pagenav" aria-label="Pages"></nav>
 </div>
-<main id="page" aria-live="polite">
-  <section class="card pg-soon">
-    <h2>Opens after the count</h2>
-    <p>This page needs the final results. It will open here once the IEC has finished counting.</p>
+<main id="page" class="pg pg-wide">
+  <form class="pg-controls" id="controls" onsubmit="return false">
+    <div class="pg-search"><label for="q">Find a municipality or ward</label>
+      <input id="q" type="search" autocomplete="off" placeholder="Municipality name, code or ward, e.g. Ward 10 Cape Town"><ul id="qlist" class="cb-list"></ul></div>
+    <label>Election <select id="year"><option>2026</option><option>2021</option><option>2016</option></select></label>
+    <label>Ballot <select id="ballot"><option value="pr">Municipal PR</option><option value="ward">Ward</option></select></label>
+    <label>Map <select id="mode"><option value="leader">Leader</option><option value="da">DA share</option><option value="part">Ballots cast / registered</option></select></label>
+  </form>
+
+  <nav class="trail" id="trail" aria-label="Location"></nav>
+  <section class="pg-layout ex-layout" aria-labelledby="mapTitle">
+    <div class="pg-mapcol">
+      <h2 id="mapTitle" class="pg-h2">Leading party · Municipal PR · 2026</h2>
+      <div id="atlas" class="pg-map"></div>
+      <div class="legend" id="legend"></div>
+    </div>
+    <aside class="pg-detail" id="detail" aria-busy="false"></aside>
   </section>
+
+  <section class="ex-children" id="children" aria-labelledby="childTitle" hidden>
+    <h2 id="childTitle" class="pg-h2"></h2>
+    <p class="note" id="childNote"></p>
+    <div class="tablewrap"><table class="datatable" id="childTable"></table></div>
+  </section>
+
+  <details class="method">
+    <summary>Sources and definitions</summary>
+    <p>All numbers come from the IEC's “Downloadable detailed results” files: one row per voting district, ballot and party. Shares are of all valid votes on that ballot. Totals for bigger areas add votes first, then divide.</p>
+    <p>“Ballots cast / registered” is the number of ballots cast on the selected ballot (valid plus spoilt) divided by registered voters. It is calculated here and is not the IEC's official turnout figure, which is not in these files.</p>
+    <p>The ward ballot is a contest between candidates. These files give votes by party (independent candidates as listed by the IEC), not candidate names, so the ward table shows the leading party on the ward ballot, not a named councillor. Council seat allocations are not in these files and are not shown.</p>
+    <p>Maps use the IEC's 2026 boundaries. For 2021 and 2016, a municipality is coloured only if its boundary did not change; ward and voting-district maps are shown for 2026 only, and earlier wards are listed in the table. Voting districts have no boundaries in these files, so they appear in a table, not on the map.</p>
+    <p id="methodSource"></p>
+  </details>
+  <p id="announce" class="sr-only" aria-live="polite"></p>
 </main>
 <footer>
   <p>Source: IEC detailed results files (<a href="https://results.elections.org.za/home/Downloads/ME-Results">results.elections.org.za</a>). Not affiliated with the IEC.</p>
   <p class="madeby">Made by <a href="https://valeriocosta.com">Valerio Costa</a></p>
 </footer>
-<script src="assets/core.js?v=1"></script>
-<script src="assets/pages.js?v=1"></script>
+<script src="assets/core.js?v=2"></script>
+<script src="assets/pages.js?v=2"></script>
+<script src="assets/atlas.js?v=1"></script>
+<script src="assets/explore.js?v=1"></script>
 </body>
 </html>
