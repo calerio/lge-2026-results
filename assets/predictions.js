@@ -104,7 +104,7 @@ function evaluation(b){
 
 // After the count: score the projections we actually published against the final result.
 function howClose(h, nh, p, n){
-  const done = n && n.vdCounted >= n.vdTotal;
+  const done = n && n.vdCounted / n.vdTotal >= 0.999;   // the IEC declares with a handful of districts empty
   if(!done) return "";
   const stages = [10, 25, 50, 75];
   const rowsFor = (label, series, final) => stages.map((st, i) => {
