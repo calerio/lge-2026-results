@@ -11,7 +11,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=League+Gothic&display=swap" rel="stylesheet">
 <link href="assets/style.css?v=37" rel="stylesheet">
-<link href="assets/pages.css?v=4" rel="stylesheet">
+<link href="assets/pages.css?v=7" rel="stylesheet">
 </head>
 <body data-page="shift">
 <div class="masthead">
@@ -43,15 +43,35 @@
     <aside class="pg-detail" id="detail" aria-busy="false"></aside>
   </section>
 
+  <section class="sh-sec" aria-labelledby="h-prov">
+    <h2 id="h-prov" class="pg-h2">Province by province</h2>
+    <p class="vt-p" id="provLead"></p>
+    <div class="vt-rel" id="provWrap"><div class="sm-grid" id="provGrid"></div></div>
+    <p class="note" id="provNote"></p>
+  </section>
+
+  <section class="sh-sec sh-two">
+    <div id="metroSec" aria-labelledby="h-metro">
+      <h2 id="h-metro" class="pg-h2">The metros</h2>
+      <p class="vt-p" id="metroLead"></p>
+      <div class="vt-rel" id="metroWrap"><svg id="figMetro" class="ch-svg" role="img" aria-labelledby="h-metro metroLead"></svg></div>
+      <p class="note" id="metroNote"></p>
+    </div>
+    <div id="bandSec" aria-labelledby="h-band">
+      <h2 id="h-band" class="pg-h2">Where the DA started from</h2>
+      <p class="vt-p" id="bandLead"></p>
+      <div class="vt-rel" id="bandWrap"><svg id="figBand" class="ch-svg" role="img" aria-labelledby="h-band bandLead"></svg></div>
+      <p class="note" id="bandNote"></p>
+    </div>
+  </section>
+
   <section class="sh-rank" aria-labelledby="rankTitle">
     <h2 id="rankTitle" class="pg-h2">Largest gains and losses</h2>
+    <p class="vt-p" id="rankLead"></p>
+    <ol class="dv-list" id="rankList"></ol>
     <p class="note" id="rankNote"></p>
-    <div class="sh-rankcols">
-      <div><h3>Largest gains</h3><ol class="ranklist" id="gains"></ol></div>
-      <div><h3>Largest losses</h3><ol class="ranklist" id="losses"></ol></div>
-    </div>
     <details class="fulltable" id="full">
-      <summary>View all</summary>
+      <summary id="fullSum">Show the full table</summary>
       <div class="ft-tools">
         <label><input type="checkbox" id="flipOnly"> <span id="flipLabel">PR lead changed only</span></label>
         <button type="button" id="csv" class="linkbtn">Download this table (CSV)</button>
@@ -62,9 +82,10 @@
 
   <details class="method">
     <summary>How this is calculated</summary>
-    <p>DA share is DA votes divided by all valid votes on the same ballot in the same place. Change is in percentage points (pp): 20% to 25% is +5 pp. Vote change is the difference in DA votes. Totals for several places add the votes first and then divide; they never average percentages.</p>
-    <p>A municipality is compared only if no voting district moved between it and a neighbouring municipality between the two elections. A ward is compared only if it is made of exactly the same voting districts as one earlier ward; a ward with the same number but different districts is left out. Province and South Africa totals include every municipality, because those outer boundaries did not change.</p>
+    <p>DA share is DA votes divided by all valid votes on the same ballot in the same place. The live results page adds the ward and PR ballots together, so its DA share differs slightly from the PR-ballot figures here. Change is in percentage points (pts): 20% to 25% is +5 pts. Vote change is the difference in DA votes. Totals for several places add the votes first and then divide; they never average percentages.</p>
+    <p>A municipality is compared only if no voting district moved into or out of it between the two elections. A ward is compared only if it is made of exactly the same voting districts as one earlier ward; a ward with the same number but different districts is left out. Province and South Africa totals include every municipality, because those outer boundaries did not change.</p>
     <p>Blue means the DA's share went up, orange that it went down. Orange does not stand for any party. Arrows show the size of the change at each place; they do not show people moving.</p>
+    <p>“Where the DA started from” groups comparable municipalities by the DA's share in the earlier election and adds up their votes. The IEC files do not say who governed each council, so these groups are not a measure of where the DA governed.</p>
     <p id="methodSource"></p>
   </details>
   <p id="announce" class="sr-only" aria-live="polite"></p>
@@ -73,9 +94,10 @@
   <p>Source: IEC detailed results files (<a href="https://results.elections.org.za/home/Downloads/ME-Results">results.elections.org.za</a>). Not affiliated with the IEC.</p>
   <p class="madeby">Made by <a href="https://valeriocosta.com">Valerio Costa</a></p>
 </footer>
-<script src="assets/core.js?v=2"></script>
+<script src="assets/core.js?v=4"></script>
 <script src="assets/pages.js?v=2"></script>
+<script src="assets/charts.js?v=1"></script>
 <script src="assets/atlas.js?v=1"></script>
-<script src="assets/shift.js?v=1"></script>
+<script src="assets/shift.js?v=5"></script>
 </body>
 </html>

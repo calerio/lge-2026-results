@@ -11,12 +11,12 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=League+Gothic&display=swap" rel="stylesheet">
 <link href="assets/style.css?v=37" rel="stylesheet">
-<link href="assets/pages.css?v=4" rel="stylesheet">
+<link href="assets/pages.css?v=7" rel="stylesheet">
 </head>
 <body data-page="votes">
 <div class="masthead">
   <h1>Where votes changed</h1>
-  <p class="pg-intro">How the DA's votes and vote share changed since 2021 or 2016, and where. A party can gain votes and still lose share.</p>
+  <p class="pg-intro">The DA's vote count and its share of the vote can move in different directions. This page shows where each one rose or fell.</p>
   <p class="pg-basis" id="basis">Loading…</p>
   <nav class="pagenav" id="pagenav" aria-label="Pages"></nav>
 </div>
@@ -31,16 +31,19 @@
   <section class="vt-ch" aria-labelledby="h-lead">
     <h2 id="h-lead" class="vt-h">Votes and share</h2>
     <p class="vt-lead" id="lead"></p>
-    <div class="vt-pair"><figure><figcaption>DA votes</figcaption><svg id="figVotes" class="vt-fig" role="img"></svg></figure>
+    <div class="vt-pair" id="pairWrap"><figure><figcaption>DA votes</figcaption><svg id="figVotes" class="vt-fig" role="img"></svg></figure>
       <figure><figcaption>DA share of valid votes</figcaption><svg id="figShare" class="vt-fig" role="img"></svg></figure></div>
     <p class="note" id="leadNote"></p>
   </section>
 
-  <section class="vt-ch" aria-labelledby="h-parties">
-    <h2 id="h-parties" class="vt-h">How the party totals moved</h2>
-    <p class="vt-p" id="partiesIntro"></p>
-    <svg id="figParties" class="vt-fig vt-wide" role="img" aria-labelledby="h-parties"></svg>
-    <p class="note" id="partiesNote"></p>
+  <section class="vt-ch" aria-labelledby="h-split">
+    <h2 id="h-split" class="vt-h">More people voting, or a bigger share?</h2>
+    <p class="vt-p" id="splitLead"></p>
+    <div class="vt-rel" id="splitWrap">
+      <div class="sp-hero" id="splitHero"></div>
+      <div class="sp-rows" id="splitRows"></div>
+    </div>
+    <p class="note" id="splitNote"></p>
   </section>
 
   <section class="vt-ch" aria-labelledby="h-places">
@@ -49,40 +52,43 @@
     <div id="atlas" class="pg-map vt-map"></div>
     <div class="legend" id="legend"></div>
     <h3 class="vt-h3">How the gains and losses add up</h3>
-    <svg id="figWaterfall" class="vt-fig vt-wide" role="img" aria-label="DA vote gains and losses by place, adding up to the net change"></svg>
+    <svg id="figWaterfall" class="vt-fig vt-narrow" role="img" aria-label="DA vote gains and losses by place, adding up to the net change"></svg>
     <p class="note" id="wfNote"></p>
   </section>
 
-  <section class="vt-ch" aria-labelledby="h-scatter">
+  <section class="vt-ch" id="scatterSec" aria-labelledby="h-scatter">
     <h2 id="h-scatter" class="vt-h">More votes is not always more share</h2>
-    <p class="vt-p" id="scatterIntro"></p>
-    <div class="vt-scatterwrap"><svg id="figScatter" class="vt-fig vt-wide" role="img" aria-labelledby="h-scatter"></svg><div class="atlas-tip" id="sTip" hidden></div></div>
-    <p class="note">Each circle is one place; its area shows valid votes in 2026 (ballot volume, not population). The full list is in the table below.</p>
+    <p class="vt-p" id="scatterLead"></p>
+    <div class="vt-rel" id="scatterWrap"><svg id="figScatter" class="vt-fig vt-wide" role="img" tabindex="0"></svg></div>
+    <p class="note" id="scatterNote"></p>
+    <h3 class="vt-h3">One example from each quarter</h3>
+    <div id="cases" class="vt-cases"></div>
+    <p class="note" id="casesNote"></p>
   </section>
 
-  <section class="vt-ch" aria-labelledby="h-cases">
-    <h2 id="h-cases" class="vt-h">Four patterns, one example each</h2>
-    <p class="vt-p" id="casesIntro"></p>
-    <div id="cases"></div>
-  </section>
-
-  <section class="vt-ch" aria-labelledby="h-sel">
-    <h2 id="h-sel" class="vt-h">How the vote change adds up</h2>
-    <p class="vt-p" id="selIntro"></p>
+  <section class="vt-ch" id="selSec" aria-labelledby="h-sel" hidden>
+    <h2 id="h-sel" class="vt-h"></h2>
     <div id="sel"></div>
   </section>
 
-  <section class="vt-ch" aria-labelledby="h-table">
-    <h2 id="h-table" class="vt-h">Every place</h2>
-    <div class="ft-tools"><label>Show <select id="pattern"><option value="">All places</option><option value="++">More votes, higher share</option><option value="-+">Fewer votes, higher share</option><option value="+-">More votes, lower share</option><option value="--">Fewer votes, lower share</option><option value="x">Not comparable</option></select></label>
+  <section class="vt-ch" id="partiesSec" aria-labelledby="h-parties">
+    <h2 id="h-parties" class="vt-h">How the party totals moved</h2>
+    <p class="vt-p" id="partiesIntro"></p>
+    <svg id="figParties" class="vt-fig vt-narrow" role="img" aria-labelledby="h-parties"></svg>
+    <p class="note" id="partiesNote"></p>
+  </section>
+
+  <details class="fulltable vt-ch" id="full">
+    <summary id="fullSum">Show the full table</summary>
+    <div class="ft-tools"><label>Show <select id="pattern"><option value="">All places</option><option value="++">More votes, bigger share</option><option value="-+">Fewer votes, bigger share</option><option value="+-">More votes, smaller share</option><option value="--">Fewer votes, smaller share</option><option value="x">Not comparable</option></select></label>
       <button type="button" id="csv" class="linkbtn">Download this table (CSV)</button></div>
     <div class="tablewrap"><table class="datatable" id="table"></table></div>
-  </section>
+  </details>
 
   <details class="method">
     <summary>How this is calculated</summary>
-    <p>All counts are IEC votes on the municipal party-list (PR) ballot. DA share is DA votes divided by all valid votes on that ballot. Totals add votes first and then divide.</p>
-    <p>The split of a vote change: with D for DA votes, V for valid votes and s = D/V, the change D₁ − D₀ equals a share part (s₁ − s₀) × (V₀ + V₁)/2 plus a ballot-volume part (V₁ − V₀) × (s₀ + s₁)/2. The two parts add up exactly. This is arithmetic on the counts. It cannot tell who switched party or who stayed home.</p>
+    <p>All counts are IEC votes on the municipal party-list (PR) ballot. DA share is DA votes divided by all valid votes on that ballot. Totals add votes first and then divide. Changes in share are in percentage points (pts): 20% to 25% is +5 pts. The live results page adds the ward and PR ballots together, so its DA share differs slightly from this page.</p>
+    <p>The split of a vote change: with D for DA votes, V for valid votes and s = D/V, the change D₁ − D₀ equals a share part (s₁ − s₀) × (V₀ + V₁)/2 plus a valid-votes part (V₁ − V₀) × (s₀ + s₁)/2. The two parts add up exactly; the valid-votes part is rounded to whole votes and the share part is the rest. “More people voting” means more valid votes on this ballot, which moves with both turnout and the number of registered voters. This is arithmetic on the counts. It cannot tell who switched party or who stayed home.</p>
     <p>A municipality is compared only if no voting district moved across its boundary between the two elections; a ward only if it has exactly the same voting districts as an earlier ward. Province and national totals include every municipality. Party names are matched exactly, with one listed rename: “Vryheidsfront Plus” (2016, 2021) is the same party as “Vryheidsfront Plus | Freedom Front Plus” (2026).</p>
     <p id="methodSource"></p>
   </details>
@@ -92,9 +98,10 @@
   <p>Source: IEC detailed results files (<a href="https://results.elections.org.za/home/Downloads/ME-Results">results.elections.org.za</a>). Not affiliated with the IEC.</p>
   <p class="madeby">Made by <a href="https://valeriocosta.com">Valerio Costa</a></p>
 </footer>
-<script src="assets/core.js?v=2"></script>
+<script src="assets/core.js?v=4"></script>
 <script src="assets/pages.js?v=2"></script>
+<script src="assets/charts.js?v=1"></script>
 <script src="assets/atlas.js?v=1"></script>
-<script src="assets/votes.js?v=1"></script>
+<script src="assets/votes.js?v=8"></script>
 </body>
 </html>

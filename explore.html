@@ -11,7 +11,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=League+Gothic&display=swap" rel="stylesheet">
 <link href="assets/style.css?v=37" rel="stylesheet">
-<link href="assets/pages.css?v=4" rel="stylesheet">
+<link href="assets/pages.css?v=7" rel="stylesheet">
 </head>
 <body data-page="explore">
 <div class="masthead">
@@ -40,14 +40,16 @@
   </section>
 
   <section class="ex-children" id="children" aria-labelledby="childTitle" hidden>
-    <h2 id="childTitle" class="pg-h2"></h2>
-    <p class="note" id="childNote"></p>
-    <div class="tablewrap"><table class="datatable" id="childTable"></table></div>
+    <details class="fulltable" id="childDet"><summary id="childTitle"></summary>
+      <p class="note" id="childNote"></p>
+      <div class="ft-tools"><button type="button" id="childCsv" class="linkbtn">Download this table (CSV)</button></div>
+      <div class="tablewrap"><table class="datatable" id="childTable"></table></div>
+    </details>
   </section>
 
   <details class="method">
     <summary>Sources and definitions</summary>
-    <p>All numbers come from the IEC's “Downloadable detailed results” files: one row per voting district, ballot and party. Shares are of all valid votes on that ballot. Totals for bigger areas add votes first, then divide.</p>
+    <p>All numbers come from the IEC's “Downloadable detailed results” files: one row per voting district, ballot and party. Shares are of all valid votes on that ballot. Totals for bigger areas add votes first, then divide. The live results page adds the ward and PR ballots together, so its shares differ slightly from the single-ballot figures here.</p>
     <p>“Ballots cast / registered” is the number of ballots cast on the selected ballot (valid plus spoilt) divided by registered voters. It is calculated here and is not the IEC's official turnout figure, which is not in these files.</p>
     <p>The ward ballot is a contest between candidates. These files give votes by party (independent candidates as listed by the IEC), not candidate names, so the ward table shows the leading party on the ward ballot, not a named councillor. Council seat allocations are not in these files and are not shown.</p>
     <p>Maps use the IEC's 2026 boundaries. For 2021 and 2016, a municipality is coloured only if its boundary did not change; ward and voting-district maps are shown for 2026 only, and earlier wards are listed in the table. Voting districts have no boundaries in these files, so they appear in a table, not on the map.</p>
@@ -59,9 +61,10 @@
   <p>Source: IEC detailed results files (<a href="https://results.elections.org.za/home/Downloads/ME-Results">results.elections.org.za</a>). Not affiliated with the IEC.</p>
   <p class="madeby">Made by <a href="https://valeriocosta.com">Valerio Costa</a></p>
 </footer>
-<script src="assets/core.js?v=2"></script>
+<script src="assets/core.js?v=4"></script>
 <script src="assets/pages.js?v=2"></script>
+<script src="assets/charts.js?v=1"></script>
 <script src="assets/atlas.js?v=1"></script>
-<script src="assets/explore.js?v=1"></script>
+<script src="assets/explore.js?v=4"></script>
 </body>
 </html>

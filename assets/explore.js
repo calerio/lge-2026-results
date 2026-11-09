@@ -1,7 +1,7 @@
 // Every result: the official result for any municipality, ward or voting district, on one ballot and
 // in one election year. Data: data/archive/<year>/ (IEC counts), geo/ (IEC 2026 boundaries).
 (async function(){
-  const L = window.LGE, $ = id => document.getElementById(id), E = L.esc;
+  const L = window.LGE, K = window.Charts, $ = id => document.getElementById(id), E = L.esc;
   const NODATA = "#e2e6ea", TIE = "#6b7580";
   const DA_BINS = [20, 40, 60, 80], DA_PAL = ["#e3eef8", "#b3d1ec", "#6fa9db", "#2f7cc0", "#0b4f8a"];
   const PART_BINS = [40, 50, 60, 70], PART_PAL = ["#eef0f3", "#c9d0d8", "#9aa6b3", "#66788a", "#34475b"];
@@ -20,6 +20,7 @@
   let cmp;
   try{ [snaps[2026], cmp] = await Promise.all([L.snapshot(2026), L.compareInfo()]); lists[2026] = await snaps[2026].municipalities(); }
   catch(e){ $("detail").innerHTML = `<p class="pg-error">Results could not be loaded. <a href="">Try again</a>.</p>`; return; }
+  try{ await document.fonts.ready; }catch(e){}
   async function year(y){ if(!snaps[y]){ snaps[y] = await L.snapshot(+y); lists[y] = await snaps[y].municipalities(); } return lists[y]; }
   const byCode = Object.fromEntries(lists[2026].map(m => [m.code, m]));
 
@@ -74,7 +75,7 @@
     if(feats.length) atlas.paintWards(Object.fromEntries(Object.entries(munFile.wards).map(([id, w]) => [id, colourOf(w)])));
     atlas.select(st.area); atlas.selectWard(st.ward);
     $("mapTitle").textContent = `${{leader: st.ballot === "pr" ? "Leading party" : "Most votes on the ward ballot", da: "DA share", part: "Ballots cast as a share of registered voters"}[st.mode]} · ${L.BALLOT_LABEL[st.ballot].replace(" ballot", "")} · ${st.year}${st.area && st.year === "2026" ? " · wards of " + byCode[st.area].name : ""}`;
-    $("basis").textContent = `${L.BALLOT_LABEL[st.ballot]} · ${st.year} · ${snaps[st.year].manifest.status === "final" ? "Final, as declared by the IEC" : "Provisional"} · IEC data as of ${L.fmtSAST(snaps[st.year].generated)}`;
+    $("basis").textContent = `${L.BALLOT_LABEL[st.ballot]} · ${st.year} · ${snaps[st.year].manifest.status === "final" ? "Final results, as declared by the IEC" : "Provisional"} · IEC data as of ${L.fmtSAST(snaps[st.year].generated)}`;
     legend(); trail(); detail(); children();
     if(opts.zoom) st.area ? atlas.zoomTo(st.area) : atlas.zoomToSA();
     $("methodSource").textContent = `Snapshot ${snaps[st.year].manifest.snapshot} (${st.year}), IEC file generated ${L.fmtSAST(snaps[st.year].generated)}.`;
@@ -135,29 +136,42 @@
       <dt>Ballots cast / registered</dt><dd>${reg && x.spoilt != null ? L.fmtPct(100 * (x.valid + x.spoilt) / reg) + " (calculated; not the IEC's official turnout)" : "Unavailable"}</dd></dl>`;
     h += await history_(c);
     if(st.area) h += `<p class="dt-links"><a href="shift.html?area=${st.area}${st.ward ? "&level=ward&ward=" + st.ward : ""}&ballot=${st.ballot === "pr" ? "municipal-pr" : "ward"}">See the shift</a> · <a href="votes.html?area=${st.area}">Where votes changed</a></p>`;
-    d.innerHTML = h; wire(c, rows, x);
+    d.innerHTML = h; drawHist(); wire(c, rows, x);
   }
   // Earlier elections for the same place, only where the place is comparable.
   async function history_(c){
     if(c.kind === "vd") return "";
+    histSeries = null;
+    if(c.kind === "ward" && st.year !== "2026") return `<h4 class="dt-h">Earlier elections</h4><p class="dt-line">Earlier elections are shown for 2026 wards only.</p>`;
     const years = ["2026", "2021", "2016"], obs = {};
     for(const y of years){
       if(c.kind === "sa"){ obs[y] = sumUnits(await year(y)); continue; }
-      if(c.kind === "munic"){ if(y === st.year || y === "2026" || cmp.baselines[y].munics[st.area].ok) obs[y] = (await year(y)).find(m => m.code === st.area); continue; }
-      if(st.year !== "2026") continue;   // ward history only from the 2026 ward
+      if(c.kind === "munic"){ if(y === "2026" || cmp.baselines[y].munics[st.area].ok) obs[y] = (await year(y)).find(m => m.code === st.area); continue; }
       if(y === "2026"){ obs[y] = c.u; continue; }
       const bw = (cmp.baselines[y].wards[st.area] || {})[st.ward];
       if(bw){ await year(y); obs[y] = (await snaps[y].municipality(st.area)).wards[bw]; }
     }
     const got = years.filter(y => obs[y] && b(obs[y]) && b(obs[y]).valid > 0);
-    if(got.length < 2) return `<h4 class="dt-h">Earlier elections</h4><p class="dt-line">${c.kind === "ward" ? "These ward boundaries changed; a direct comparison with 2021 or 2016 is unavailable." : "No comparable earlier result: the boundary changed."}</p>`;
+    if(got.length < 2) return `<h4 class="dt-h">Earlier elections</h4><p class="dt-line">${c.kind === "ward" ? "This ward's voting districts changed since 2021 and 2016, so there is no earlier result to compare." : "No comparable earlier result, because the boundary changed."}</p>`;
     // parties: union of the top 3 in each year shown, plus the DA
     const ps = new Set([L.DA]); got.forEach(y => Object.entries(b(obs[y]).votes).sort((p, q) => q[1] - p[1]).slice(0, 3).forEach(([p]) => ps.add(p)));
     const sh = (y, p) => { const x = b(obs[y]); return x.votes[p] != null ? 100 * x.votes[p] / x.valid : null; };
-    return `<h4 class="dt-h">Earlier elections</h4><p class="note">Same ${c.kind === "ward" ? "voting districts" : "boundary"}, ${L.BALLOT_LABEL[st.ballot].toLowerCase()}. Top three parties of each year, plus the DA. A dash means the party had no votes listed that year.</p>
+    const yrs = [...got].reverse(), da = yrs.map(y => sh(y, L.DA));
+    histSeries = {years: yrs, series: [...ps].map(p => ({label: L.partyShort(p), vals: yrs.map(y => sh(y, p)), colour: L.partyColour(p), strong: p === L.DA}))};
+    const where = c.kind === "ward" ? c.title : c.title, daTxt = da.every(v => v != null) ? `DA share here: ${yrs.map((y, i) => `${L.fmtPct(da[i])} in ${y}`).join(", ").replace(/, ([^,]*)$/, " and $1")}.` : "";
+    return `<h4 class="dt-h">Earlier elections</h4><p class="dt-line">${E(daTxt)}</p>
+      <svg id="histFig" class="ch-svg" role="img" aria-label="Party shares in ${E(where)}, ${yrs.join(", ")}"></svg>
+      <p class="note">Same ${c.kind === "ward" ? "voting districts" : "boundary"}, ${L.BALLOT_LABEL[st.ballot].replace(/^./, x => x.toLowerCase())}. The top three parties of each year, plus the DA.</p>
+      <details class="dt-more"><summary>Show the numbers</summary>
       <table class="ptable"><thead><tr><th scope="col">Party</th>${got.map(y => `<th scope="col" class="n">${y}</th>`).join("")}</tr></thead><tbody>
       ${[...ps].map(p => `<tr${p === L.DA ? ' class="da"' : ""}><th scope="row"><i class="sw" style="background:${L.partyColour(p)}"></i>${E(L.partyShort(p))}</th>${got.map(y => `<td class="n">${L.fmtPct(sh(y, p))}</td>`).join("")}</tr>`).join("")}
-      <tr><th scope="row">Valid votes</th>${got.map(y => `<td class="n">${L.fmtVotes(b(obs[y]).valid)}</td>`).join("")}</tr></tbody></table>`;
+      <tr><th scope="row">Valid votes</th>${got.map(y => `<td class="n">${L.fmtVotes(b(obs[y]).valid)}</td>`).join("")}</tr></tbody></table>
+      <p class="note">A dash means the party had no votes listed that year.</p></details>`;
+  }
+  let histSeries = null;
+  function drawHist(){
+    const svg = $("histFig"); if(!svg || !histSeries) return;
+    K.slope(svg, {years: histSeries.years, series: histSeries.series, fmt: v => v.toFixed(1) + "%", w: Math.max(260, Math.round(svg.getBoundingClientRect().width))});
   }
   function wire(c, rows, x){
     if($("more")) $("more").onclick = () => { showAll = !showAll; detail(); };
@@ -183,12 +197,17 @@
     }else if(st.area && munFile){
       rows = Object.entries(munFile.wards).map(([id, w]) => ({id, name: `Ward ${L.wardNo(id)}`, u: w, go: () => { st.ward = id; st.vd = ""; save(); render(); }})).sort((a, c) => L.wardNo(a.id) - L.wardNo(c.id));
       title = `Wards of ${byCode[st.area].name}, ${st.year}`;
-      if(st.year !== "2026") note = `${st.year} wards had different boundaries, so they are listed here but not mapped.`;
+      if(st.year !== "2026") note = `The map shows 2026 wards only, so ${st.year} wards are listed here.`;
     }else{
       rows = lists[st.year].map(m => ({id: m.code, name: m.name, u: m, go: () => { st.area = m.code; save(); render({zoom: true}); }})).sort((a, c) => a.name.localeCompare(c.name));
       title = `All municipalities, ${st.year}`;
     }
-    $("children").hidden = false; $("childTitle").textContent = title; $("childNote").textContent = note;
+    const kind = st.ward ? "voting districts" : st.area ? "wards" : "municipalities";
+    $("children").hidden = false; $("childTitle").textContent = st.ward ? (rows.length === 1 ? `Show the voting district in ward ${L.wardNo(st.ward)}` : `Show all ${rows.length} voting districts in ward ${L.wardNo(st.ward)}`)
+      : st.area ? `Show all ${rows.length} wards of ${byCode[st.area].name} (${st.year})` : `Show all ${rows.length} municipalities (${st.year})`; $("childNote").textContent = note;
+    $("childCsv").onclick = () => L.downloadCSV(`lge-${st.year}-${st.ward || st.area || "ZA"}-${kind.replace(" ", "-")}-${st.ballot}.csv`,
+      ["year", "id", "name", "ballot", "leader", "leader_share_pct", "da_share_pct", "valid_votes", "status", "snapshot"],
+      rows.map(r => { const l = L.leader(r.u, st.ballot), da = L.daOf(r.u, st.ballot); return [+st.year, r.id, r.name, L.BALLOT_LABEL[st.ballot], l && l.party, l && l.share, da && da.share, b(r.u) && b(r.u).valid, snaps[st.year].manifest.status, snaps[st.year].manifest.snapshot]; }));
     $("childTable").innerHTML = `<thead><tr><th scope="col">Place</th><th scope="col">Leader</th><th scope="col" class="n">Leader share</th><th scope="col" class="n">DA share</th><th scope="col" class="n">Valid votes</th></tr></thead><tbody>
       ${rows.map((r, i) => { const l = L.leader(r.u, st.ballot), da = L.daOf(r.u, st.ballot);
         return `<tr><th scope="row"><button type="button" class="linkbtn" data-i="${i}">${E(r.name)}</button></th><td>${l ? `<i class="sw" style="background:${l.tie ? TIE : L.partyColour(l.party)}"></i>${E(L.partyShort(l.party))}${l.tie ? " (tied)" : ""}` : "No result"}</td>

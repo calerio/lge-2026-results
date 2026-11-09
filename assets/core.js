@@ -48,8 +48,8 @@
     return share(v, t);
   }
   const fmtPct = (x, d = 1) => x == null ? "–" : x.toFixed(d) + "%";
-  // Change in share is in percentage points, never "%".
-  const fmtPP = (x, d = 1) => x == null ? "–" : (x > 0 ? "+" : x < 0 ? "−" : "±") + Math.abs(x).toFixed(d) + " pp";
+  // Change in share is in percentage points ("pts"), never "%".
+  const fmtPP = (x, d = 1) => x == null ? "–" : (x > 0 ? "+" : x < 0 ? "−" : "±") + Math.abs(x).toFixed(d) + " pts";
   const fmtDelta = x => x == null ? "–" : (x > 0 ? "+" : x < 0 ? "−" : "±") + fmtVotes(Math.abs(x));
 
   // ---------- time (SAST) ----------
@@ -73,7 +73,7 @@
       municipality: code => json(`${BASE}${year}/municipality/${encodeURIComponent(code)}.json${pin}`)};
   }
   function statusLine(m, ballot = "Municipal party-list (PR) ballot"){
-    const st = m.status === "final" ? "Final, as declared by the IEC" : "Provisional";
+    const st = m.status === "final" ? "Final results, as declared by the IEC" : "Provisional";
     return `${ballot} · ${m.year} · ${st} · IEC data as of ${fmtSAST(parseIEC(m.sourceGenerated))}`;
   }
 
