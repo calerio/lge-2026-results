@@ -52,6 +52,13 @@ async function wardsFor(id){
 // Final results of 2021 and 2016 (data/past.json, made once by scripts/fetch_past.py)
 let PAST = null;
 const pastReady = getJSON("data/past.json").then(d => PAST = d).catch(() => null);
+// Once the IEC has declared the results (data/archive/2026/FINAL, mirrored in the manifest), say so.
+let DECLARED = false;
+getJSON("data/archive/2026/manifest.json").then(m => {
+  DECLARED = m.status === "final"; if(!DECLARED) return;
+  const f = document.getElementById("declared"); if(f) f.textContent = "Final results, as declared by the IEC.";
+  const s = document.getElementById("status"); if(s && s.textContent === "counted · provisional") s.textContent = "counted · final";
+}).catch(() => {});
 const past = (year, munic, party) => { const y = PAST && PAST[year]; if(!y) return null;
   if(munic == null) return y.national[party] ?? null;
   const r = (y.munics[munic] || []).find(p => p[0] === party); return r ? r[1] : null; };
@@ -126,7 +133,7 @@ async function show(i){
   const n = view.national, pct = n.vdTotal ? n.vd / n.vdTotal * 100 : 0;
   $("statusbar").classList.toggle("past", past);
   $("pct").textContent = pct.toFixed(0) + "%";
-  $("status").textContent = past ? "counted · viewing " + hm(view.reportDate) + " count" : pct >= 99.9 ? "counted · provisional" : "counted";
+  $("status").textContent = past ? "counted · viewing " + hm(view.reportDate) + " count" : pct >= 99.9 ? (DECLARED ? "counted · final" : "counted · provisional") : "counted";
   $("progfill").style.width = pct + "%"; $("progbar").setAttribute("aria-valuenow", pct.toFixed(0));
   render(view, i === -1 ? index.length - 2 : i - 1);
   paintMap();

@@ -103,6 +103,7 @@ function evaluation(b){
 }
 
 // After the count: score the projections we actually published against the final result.
+let DECLARED = false;   // set from data/archive/2026/manifest.json once the IEC has declared
 function howClose(h, nh, p, n){
   const done = n && n.vdCounted / n.vdTotal >= 0.999;   // the IEC declares with a handful of districts empty
   if(!done) return "";
@@ -130,14 +131,15 @@ function howClose(h, nh, p, n){
   return `<section class="card" id="close"><h2>How close were we?</h2>
     <p>For each stage of the count, the DA estimate we published live, compared with the final count.</p>
     <div class="pr-tablewrap"><table class="bt"><thead><tr><th>Place</th><th>Stage <small>(actual)</small></th><th>Our estimate</th><th>Final</th><th>Miss <small>(count taken as final)</small></th><th>Inside range</th></tr></thead>
-    <tbody>${body}</tbody></table></div><p class="note">Provisional until the IEC declares the results. Only projections published live during the count are scored, not ones recomputed afterwards.</p></section>`;
+    <tbody>${body}</tbody></table></div><p class="note">${DECLARED ? "Scored against the final result, as declared by the IEC." : "Provisional until the IEC declares the results."} Only projections published live during the count are scored, not ones recomputed afterwards.</p></section>`;
 }
 
 async function load(){
   try{
     const [p, h, n, nh, b, live] = await Promise.all([get("data/projections.json"), get("data/projections_history.json").catch(() => []),
       get("data/projection_national.json").catch(() => null), get("data/projection_national_history.json").catch(() => []),
-      get("data/backtest.json").catch(() => null), get("https://lge2026.nologna.workers.dev/api/latest").catch(() => null)]);
+      get("data/backtest.json").catch(() => null), get("https://lge2026.nologna.workers.dev/api/latest").catch(() => null),
+      get("data/archive/2026/manifest.json").then(m => { DECLARED = m.status === "final"; }).catch(() => null)]);
     const nb = await get("data/backtest_national.json").catch(() => null);
     $("asof").innerHTML = `Recalculated with every new IEC count, which we check for every five minutes. This version uses the count from ${hm(p.reportDate)}.`;
     const behind = live && live.reportDate && (new Date(live.reportDate) - new Date(p.reportDate)) > 20 * 60000;
